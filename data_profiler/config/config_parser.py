@@ -38,12 +38,13 @@ class ConfigParser:
         if any(k in config for k in discovery_keys):
             logger.info("Auto-mapping discovery keys to 'discovery' section")
             disco = config.setdefault("discovery", {})
-            for k in discovery_keys:
-                if k in config:
-                    # Move only if not already present in disco (CLI/prior config takes precedence)
-                    if k not in disco:
-                        disco[k] = config.pop(k)
-                    else:
-                        config.pop(k) # Drop redundant root key
+            if "group_by" not in disco:
+                disco["group_by"] = config.pop("group_by")
+
+        # Basic validation of config structure
+        if "source" not in config:
+            # If we STILL don't have a source, it's invalid unless CLI provides it
+            # But the parser should ideally return what it has and let CLI handle merging
+            pass
 
         return config

@@ -194,3 +194,7 @@ exemplos de json:
     "table": "your-table"
   }
 }
+
+# TESTE LOCAL
+$env:PYTHONPATH = "c:\Temp\wezos-gates"
+python c:\Temp\wezos-gates\data_profiler\interfaces\cli.py --source csv --config c:\Temp\wezos-gates\seu_config.json --output c:\Temp\wezos-gates\reports_test

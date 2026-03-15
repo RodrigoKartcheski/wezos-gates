@@ -1,6 +1,7 @@
-id;nome;email;idade;data_cadastro;status
-1;Joao Silva;joao@example.com;25;01/01/2025;ATIVO
-2;Maria Souza;maria@example.com;25;15/02/2025;ATIVO
-3;Jose Santos;;45;01/03/2025;INATIVO
-4;Ana Paula;ana@invalid;18;10/10/2025;ATIVO
-5;Carlos Reis;carlos@example.com;-5;31/12/2024;PENDENTE
+id;nome;email;idade;data_cadastro;status;valor
+1;Joao Silva;joao@example.com;25;01/01/2025;ATIVO;100.0
+2;Maria Souza;maria@example.com;25;15/02/2025;ATIVO;200.0
+3;Jose Santos;;45;01/03/2025;INATIVO;300.0
+4;Ana Paula;ana@invalid;18;10/10/2025;ATIVO;400.0
+5;Carlos Reis;carlos@example.com;-5;31/12/2024;PENDENTE;500.0
+6;Joao Silva;jsilva@alt.com;26;02/01/2025;ATIVO;100.0
