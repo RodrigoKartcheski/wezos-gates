@@ -1,0 +1,24 @@
+{
+  "score": 42.86,
+  "failed_checks": [
+    {
+      "type": "null_check",
+      "column": "email",
+      "status": "FAIL",
+      "null_percent": 20.0,
+      "max_percent": 0
+    },
+    {
+      "type": "domain_check",
+      "column": "status",
+      "status": "FAIL",
+      "invalid_count": 1
+    },
+    {
+      "type": "numeric_check",
+      "column": "idade",
+      "status": "FAIL",
+      "invalid_count": 1
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "source": {
+    "type": "csv",
+    "file": "sample_data.csv"
+  },
+  "validations": {
+    "schema": {
+      "expected_columns": {
+        "id": "integer",
+        "nome": "string",
+        "email": "string",
+        "idade": "integer",
+        "data_cadastro": "datetime",
+        "status": "categorical"
+      }
+    },
+    "null_checks": [
+      {"column": "email", "max_percent": 0},
+      {"column": "nome", "max_percent": 0}
+    ],
+    "primary_key": ["id"],
+    "domain_checks": [
+      {"column": "status", "allowed_values": ["ATIVO", "INATIVO"]}
+    ],
+    "numeric_checks": [
+      {"column": "idade", "min": 0, "max": 120, "allow_negative": false}
+    ],
+    "volume_checks": {
+      "min_rows": 2
+    },
+    "group_by_checks": [
+      {
+        "group_by": ["status"],
+        "min_count": 1
+      }
+    ]
+  }
+}

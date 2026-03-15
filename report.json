@@ -1,0 +1,89 @@
+{
+  "dataset": "data_profiler\\tests\\sample_data\\sample_data.csv",
+  "data_quality_score": 42.86,
+  "results": {
+    "schema_drift": {
+      "missing_columns": [],
+      "extra_columns": [],
+      "type_mismatches": [
+        {
+          "column": "nome",
+          "expected": "string",
+          "actual": "categorical"
+        },
+        {
+          "column": "email",
+          "expected": "string",
+          "actual": "categorical"
+        }
+      ],
+      "status": "FAIL"
+    },
+    "validations": [
+      {
+        "type": "null_check",
+        "column": "email",
+        "status": "FAIL",
+        "null_percent": 20.0,
+        "max_percent": 0
+      },
+      {
+        "type": "null_check",
+        "column": "nome",
+        "status": "PASS",
+        "null_percent": 0.0,
+        "max_percent": 0
+      },
+      {
+        "type": "uniqueness_check",
+        "columns": [
+          "id"
+        ],
+        "status": "PASS",
+        "duplicate_count": 0
+      },
+      {
+        "type": "domain_check",
+        "column": "status",
+        "status": "FAIL",
+        "invalid_count": 1
+      },
+      {
+        "type": "numeric_check",
+        "column": "idade",
+        "status": "FAIL",
+        "invalid_count": 1
+      },
+      {
+        "type": "volume_check",
+        "status": "PASS",
+        "row_count": 5,
+        "min_rows": 2,
+        "max_rows": null
+      }
+    ],
+    "aggregations": [
+      {
+        "type": "group_by_check",
+        "groups": [
+          "status"
+        ],
+        "status": "PASS",
+        "summary": [
+          {
+            "status": "ATIVO",
+            "count": 3
+          },
+          {
+            "status": "INATIVO",
+            "count": 1
+          },
+          {
+            "status": "PENDENTE",
+            "count": 1
+          }
+        ]
+      }
+    ]
+  }
+}

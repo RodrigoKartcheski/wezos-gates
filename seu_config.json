@@ -1,0 +1,4 @@
+{
+  "file": "sample_data.csv",
+  "group_by": ["status", "idade"]
+}

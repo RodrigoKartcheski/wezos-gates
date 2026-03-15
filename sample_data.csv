@@ -1,0 +1,6 @@
+id;nome;email;idade;data_cadastro;status
+1;Joao Silva;joao@example.com;25;01/01/2025;ATIVO
+2;Maria Souza;maria@example.com;25;15/02/2025;ATIVO
+3;Jose Santos;;45;01/03/2025;INATIVO
+4;Ana Paula;ana@invalid;18;10/10/2025;ATIVO
+5;Carlos Reis;carlos@example.com;-5;31/12/2024;PENDENTE

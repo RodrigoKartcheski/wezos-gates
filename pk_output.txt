@@ -1,0 +1,14 @@
+﻿Dataset Rows: 5
+
+Cardinality Analysis (nunique with dropna=False):
+Column: id              | Unique Values: 5
+Column: nome            | Unique Values: 5
+Column: email           | Unique Values: 5
+Column: idade           | Unique Values: 5
+Column: data_cadastro   | Unique Values: 5
+Column: status          | Unique Values: 3
+
+--- Running DiscoveryEngine.detect_primary_keys ---
+2026-03-13 21:34:05,201 - data_profiler - INFO - Detecting primary keys via cardinality analysis
+
+Final Result: {'status': 'SUCCESS', 'type': 'SINGLE', 'columns': ['id', 'nome', 'email', 'idade', 'data_cadastro'], 'distinct_count': 5}

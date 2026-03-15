@@ -1,0 +1,26 @@
+{
+  "id": {
+    "source_type": "int64",
+    "inferred_type": "integer"
+  },
+  "nome": {
+    "source_type": "object",
+    "inferred_type": "categorical"
+  },
+  "email": {
+    "source_type": "object",
+    "inferred_type": "categorical"
+  },
+  "idade": {
+    "source_type": "int64",
+    "inferred_type": "integer"
+  },
+  "data_cadastro": {
+    "source_type": "object",
+    "inferred_type": "datetime"
+  },
+  "status": {
+    "source_type": "object",
+    "inferred_type": "categorical"
+  }
+}

@@ -1,0 +1,7 @@
+{
+    "file": "test_dedup.csv",
+    "sep": ";",
+    "dedupIncludeColumns": ["nome", "valor"],
+    "dedupExcludeColumns": ["id", "status"],
+    "group_by": ["status"]
+}

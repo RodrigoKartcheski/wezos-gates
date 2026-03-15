@@ -1,0 +1,9 @@
+pandas
+ydata-profiling
+google-cloud-bigquery
+pyarrow
+duckdb
+mcp
+pyinstaller
+pydantic
+evidently

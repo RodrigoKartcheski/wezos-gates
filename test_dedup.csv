@@ -1,0 +1,8 @@
+id;nome;status;valor
+1;Alice;ATIVO;100
+2;Bob;INATIVO;200
+1;Alice;ATIVO;100
+3;Charlie;ATIVO;300
+3;Charlie;INATIVO;300
+4;David;ATIVO;400
+5;David;ATIVO;400
