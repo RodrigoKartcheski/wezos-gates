@@ -41,17 +41,17 @@ def run_data_quality_workflow(config: Dict[str, Any], output_dir: str = ".") -> 
             logger.info("No validations provided, adding default null checks for all columns")
             validations_config["null_checks"] = [{"column": col} for col in df.columns]
 
-        val_engine = ValidationEngine(df)
+        val_engine = ValidationEngine(df.copy())
         validation_results = val_engine.run_all(validations_config)
 
         # 5. AGGREGATION CHECKS
         agg_config = validations_config.get("group_by_checks", [])
-        agg_engine = AggregationEngine(df)
-        aggregation_results = agg_engine.run(agg_config)
+        agg_engine = AggregationEngine(df.copy())
+        aggregation_results = agg_engine.run(agg_config, filter_query=validations_config.get("filter"))
 
         # 6. DISCOVERY ENGINE
         discovery_config = config.get("discovery", {})
-        discovery_engine = DiscoveryEngine(df)
+        discovery_engine = DiscoveryEngine(df.copy())
         discovery_results = discovery_engine.run_all(discovery_config)
 
         # 7. DRIFT DETECTION (New)
@@ -78,8 +78,11 @@ def run_data_quality_workflow(config: Dict[str, Any], output_dir: str = ".") -> 
         discovery_html = os.path.join(run_output_dir, "report_discovery.html")
         ReportGenerator.generate_discovery_html(dataset_name, discovery_results, discovery_html)
 
+        logger.info(f"Profiling: Passing df with {len(df)} rows")
         profile_html = os.path.join(run_output_dir, "report_profiling.html")
-        ProfilingEngine.generate_report(df, output_file=profile_html, title=f"Profile: {dataset_name}")
+        profiling_config = config.get("profiling", {})
+        # Note: ProfilingEngine.generate_report already uses apply_sql_filter which clones
+        ProfilingEngine.generate_report(df.copy(), output_file=profile_html, title=f"Profile: {dataset_name}", filter_query=profiling_config.get("filter"))
 
         dashboard_html = os.path.join(run_output_dir, "dashboard.html")
         ReportGenerator.generate_dashboard_html(dataset_name, schema_html, validations_html, profile_html, discovery_html, dashboard_html)

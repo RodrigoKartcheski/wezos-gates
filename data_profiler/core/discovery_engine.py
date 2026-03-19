@@ -1,15 +1,23 @@
 import pandas as pd
 import numpy as np
+import re
 from datetime import date
 from typing import List, Dict, Any, Optional
 from data_profiler.utils.logger import logger
+from data_profiler.utils.sql_utils import apply_sql_filter
 
 class DiscoveryEngine:
     """Engine for exploratory data discovery (PK detection, date analysis, etc.)."""
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        self.original_row_count = len(df)
         self.results = {}
+
+    def apply_filter(self, filter_query: str):
+        """Applies a SQL-like filter to the internal dataframe."""
+        self.df = apply_sql_filter(self.df, filter_query)
+        return self.df
 
     def detect_primary_keys(self, colunas_ignoradas: List[str] = None) -> Dict[str, Any]:
         """Iteratively detects primary keys or composite keys with detailed history."""
@@ -193,16 +201,24 @@ class DiscoveryEngine:
 
     def run_all(self, config: Dict[str, Any]):
         """Runs discovery based on config."""
-        # 1. Basic Stats (Always)
+        # 1. Basic Stats (Always on original data)
         total_rows = len(self.df)
         total_cols = len(self.df.columns)
-        total_size_bytes = int(self.df.memory_usage(deep=True).sum())
-        
         self.results["stats"] = {
             "total_rows": total_rows,
             "total_cols": total_cols,
-            "total_size_bytes": total_size_bytes
+            "total_size_bytes": self.df.memory_usage(deep=True).sum()
         }
+
+        # 0. Handle Filter (New: Information only, not restricting main analysis)
+        filter_query = config.get("filter")
+        if filter_query:
+            filtered_df = apply_sql_filter(self.df, filter_query)
+            self.results["filter"] = filter_query
+            self.results["original_row_count"] = total_rows
+            self.results["filtered_row_count"] = len(filtered_df)
+            # Capture sample of filtered rows (first 10)
+            self.results["filtered_sample"] = filtered_df.head(10).to_dict(orient='records')
 
         # 2. PK Detection
         if config.get("detect_keys", False):

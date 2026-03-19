@@ -115,15 +115,24 @@ class ReportGenerator:
         # 1. Dataset stats (Always from results['stats'])
         stats = discovery_results.get("stats", {})
         stats_html = ""
+        original_rows = discovery_results.get("original_row_count")
+        filtered_rows = discovery_results.get("filtered_row_count")
+        
         if "total_rows" in stats:
+            total_rows = stats['total_rows']
+            total_cols = stats['total_cols']
             bytes_val = stats.get('total_size_bytes', 0)
             gb_val = bytes_val / (1024**3)
             tb_val = bytes_val / (1024**4)
 
+            row_display = f"<b style='font-size: 1.5em;'>{total_rows:,}</b>"
+            if filtered_rows is not None and original_rows is not None:
+                 row_display = f"<b style='font-size: 1.5em;'>{original_rows:,}</b> <span style='color: #7f8c8d; font-size: 0.9em;'>({filtered_rows:,} rows matched filter)</span>"
+
             stats_html = f"""
             <div class='card' style='display: flex; gap: 40px; justify-content: center; text-align: center;'>
-                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Rows</p><b style='font-size: 1.5em;'>{stats['total_rows']:,}</b></div>
-                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Columns</p><b style='font-size: 1.5em;'>{stats['total_cols']:,}</b></div>
+                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Rows</p>{row_display}</div>
+                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Columns</p><b style='font-size: 1.5em;'>{total_cols:,}</b></div>
                 <div>
                     <p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Dataset Size</p>
                     <div style='display: flex; gap: 15px; justify-content: center; margin-top: 5px;'>
@@ -132,6 +141,39 @@ class ReportGenerator:
                         <span style='font-size: 1.1em;'><b>{tb_val:.6f}</b> <small>TB</small></span>
                     </div>
                 </div>
+            </div>
+            """
+
+        # 1.5 Filter Info (New)
+        filter_query = discovery_results.get("filter")
+        filtered_sample = discovery_results.get("filtered_sample", [])
+        filter_html = ""
+        if filter_query:
+            sample_table = ""
+            if filtered_sample:
+                # Get columns from the first record
+                cols = list(filtered_sample[0].keys())
+                header_row = "".join([f"<th>{c}</th>" for c in cols])
+                body_rows = ""
+                for row in filtered_sample:
+                    row_data = "".join([f"<td>{row.get(c, '')}</td>" for c in cols])
+                    body_rows += f"<tr>{row_data}</tr>"
+                
+                sample_table = f"""
+                <div style='margin-top: 15px; overflow-x: auto;'>
+                    <p style='font-size: 0.9em; color: #2c3e50; margin-bottom: 5px;'><b>Filtered Data Sample (First {len(filtered_sample)} rows):</b></p>
+                    <table style='font-size: 0.85em;'>
+                        <thead><tr>{header_row}</tr></thead>
+                        <tbody>{body_rows}</tbody>
+                    </table>
+                </div>
+                """
+
+            filter_html = f"""
+            <div class='card' style='background-color: #e8f4fd; border-left: 5px solid #3498db;'>
+                <p style='margin: 0; color: #2980b9;'><b>🔍 Filter Applied:</b> <code>{filter_query}</code></p>
+                <p style='margin: 5px 0 0 0; font-size: 0.85em; color: #7f8c8d;'>Analysis performed on the filtered subset of data.</p>
+                {sample_table}
             </div>
             """
 
@@ -234,6 +276,7 @@ class ReportGenerator:
                 {history_table}
                 {dedup_html}
                 {group_html}
+                {filter_html}
                 {f"<h2>Date Distributions</h2>{date_html}" if date_html else ""}
             </div>
         </body>

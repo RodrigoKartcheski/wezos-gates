@@ -1,0 +1,20 @@
+{
+  "file": "sample_data.csv",
+  "group_by": [
+    "status",
+    "idade"
+  ],
+  "discovery": {
+    "dedupIncludeColumns": [
+      "nome",
+      "valor"
+    ],
+    "dedupExcludeColumns": [
+      "id",
+      "status",
+      "email",
+      "idade",
+      "data_cadastro"
+    ]
+  }
+}

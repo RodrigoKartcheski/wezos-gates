@@ -1,13 +1,20 @@
 import pandas as pd
 from typing import List, Dict, Any
 from data_profiler.utils.logger import logger
+from data_profiler.utils.sql_utils import apply_sql_filter
 
 class AggregationEngine:
     """Runs group-by validations and metric checks."""
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        self.original_row_count = len(df)
         self.results = []
+
+    def apply_filter(self, filter_query: str):
+        """Applies a SQL-like filter to the internal dataframe."""
+        self.df = apply_sql_filter(self.df, filter_query)
+        return self.df
 
     def validate_group_by(self, group_by_checks: List[Dict[str, Any]]):
         """
@@ -35,8 +42,10 @@ class AggregationEngine:
                 "summary": agg_df.to_dict(orient="records")[:10] # Top 10 for report
             })
 
-    def run(self, config: List[Dict[str, Any]]):
+    def run(self, config: List[Dict[str, Any]], filter_query: str = None):
         logger.info("Running aggregation checks")
+        if filter_query:
+            self.apply_filter(filter_query)
         if config:
             self.validate_group_by(config)
         return self.results

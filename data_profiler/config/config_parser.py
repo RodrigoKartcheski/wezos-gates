@@ -13,14 +13,15 @@ class ConfigParser:
         
         # Keys that should go into 'source'
         source_keys = ["file", "project", "dataset", "table", "sep", "encoding"]
-        # Keys that should go into 'discovery'
-        discovery_keys = [
-            "group_by", "dedupIncludeColumns", "dedupExcludeColumns", 
-            "date_analysis", "check_nulls", "check_outliers", 
-            "check_constants", "check_empty", "detect_keys"
-        ]
+        # Sections to auto-map from root keys
+        mapping_rules = {
+            "discovery": ["group_by", "dedupIncludeColumns", "dedupExcludeColumns", 
+                          "date_analysis", "check_nulls", "check_outliers", 
+                          "check_constants", "check_empty", "detect_keys"],
+            "profiling": ["profiling_title", "title"]
+        }
 
-        # 1. Handle Simplified Source (file at root or BQ fields at root)
+        # 1. Handle Simplified Source
         if any(k in config for k in source_keys) and "source" not in config:
             logger.info("Auto-mapping root keys to 'source'")
             source_conf = {}
@@ -34,12 +35,20 @@ class ConfigParser:
                     source_conf[k] = config.pop(k)
             config["source"] = source_conf
 
-        # 2. Handle Simplified Discovery (discovery-specific keys at root)
-        if any(k in config for k in discovery_keys):
-            logger.info("Auto-mapping discovery keys to 'discovery' section")
+        # Special case: 'filter' at root - maps to DISCOVERY only to keep others clean
+        if "filter" in config:
             disco = config.setdefault("discovery", {})
-            if "group_by" not in disco:
-                disco["group_by"] = config.pop("group_by")
+            if "filter" not in disco:
+                disco["filter"] = config.pop("filter")
+
+        # 3. Handle Section Mappings (Discovery, Profiling, etc.)
+        for section, keys in mapping_rules.items():
+            if any(k in config for k in keys):
+                logger.info(f"Auto-mapping keys to '{section}' section")
+                sec_conf = config.setdefault(section, {})
+                for k in keys:
+                    if k in config and k not in sec_conf:
+                        sec_conf[k] = config.pop(k)
 
         # Basic validation of config structure
         if "source" not in config:

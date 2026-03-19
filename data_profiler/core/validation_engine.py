@@ -3,13 +3,20 @@ import numpy as np
 import re
 from typing import Dict, Any, List, Optional
 from data_profiler.utils.logger import logger
+from data_profiler.utils.sql_utils import apply_sql_filter
 
 class ValidationEngine:
     """Engine for running data quality validations on a DataFrame."""
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        self.original_row_count = len(df)
         self.results = []
+
+    def apply_filter(self, filter_query: str):
+        """Applies a SQL-like filter to the internal dataframe."""
+        self.df = apply_sql_filter(self.df, filter_query)
+        return self.df
 
     def validate_nulls(self, config: List[Dict[str, Any]]):
         """Checks for null values based on max_percent threshold."""
@@ -175,6 +182,12 @@ class ValidationEngine:
     def run_all(self, validations_config: Dict[str, Any]):
         """Runs all validations specified in the config."""
         logger.info("Running all validations")
+        
+        # 0. Apply Filter (New)
+        filter_query = validations_config.get("filter")
+        if filter_query:
+            self.apply_filter(filter_query)
+
         if "null_checks" in validations_config:
             self.validate_nulls(validations_config["null_checks"])
         if "primary_key" in validations_config:

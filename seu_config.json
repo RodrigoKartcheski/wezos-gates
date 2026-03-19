@@ -1,10 +1,22 @@
 {
   "file": "sample_data.csv",
-  "group_by": [
-    "status",
-    "idade"
-  ],
+  "validations": {
+    "primary_key": [
+      "id"
+    ],
+    "null_checks": [
+      {
+        "column": "email",
+        "max_percent": 0
+      }
+    ]
+  },
   "discovery": {
+    "filter": "idade > 30",
+    "group_by": [
+      "status",
+      "idade"
+    ],
     "dedupIncludeColumns": [
       "nome",
       "valor"
