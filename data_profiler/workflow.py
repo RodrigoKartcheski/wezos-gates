@@ -30,7 +30,7 @@ def run_data_quality_workflow(config: Dict[str, Any], output_dir: str = ".") -> 
         inferred_schema = SchemaInference.infer_schema(df)
 
         # 3. SCHEMA VALIDATION
-        drift_report = {"status": "PASS"}
+        drift_report = {"status": "NOT_RUN"}
         expected_schema = config.get("validations", {}).get("schema", {}).get("expected_columns")
         if expected_schema:
             drift_report = SchemaValidator.validate_schema(expected_schema, inferred_schema)
@@ -66,14 +66,15 @@ def run_data_quality_workflow(config: Dict[str, Any], output_dir: str = ".") -> 
                 drift_results = {"status": "FAIL", "message": str(e)}
 
         # 8. SCORING
-        score = ScoringEngine.calculate_score(validation_results, drift_report)
+        scoring_config = config.get("scoring", {})
+        scores = ScoringEngine.calculate_score(validation_results, drift_report, scoring_config)
 
         # 10. GENERATE HTML REPORTS (Target run_output_dir)
         schema_html = os.path.join(run_output_dir, "report_schema.html")
         ReportGenerator.generate_schema_html(dataset_name, drift_report, inferred_schema, schema_html)
 
         validations_html = os.path.join(run_output_dir, "report_validations.html")
-        ReportGenerator.generate_validations_html(dataset_name, score, validation_results, aggregation_results, validations_html)
+        ReportGenerator.generate_validations_html(dataset_name, scores, validation_results, aggregation_results, validations_html)
 
         discovery_html = os.path.join(run_output_dir, "report_discovery.html")
         ReportGenerator.generate_discovery_html(dataset_name, discovery_results, discovery_html)
@@ -95,7 +96,7 @@ def run_data_quality_workflow(config: Dict[str, Any], output_dir: str = ".") -> 
         logger.info(f"Latest Dashboard: {top_level_dashboard}")
         return {
             "dataset": dataset_name,
-            "score": score,
+            "scores": scores,
             "reports_dir": run_output_dir
         }
 

@@ -22,6 +22,7 @@ class ReportGenerator:
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; }
         .badge-pass { background-color: #eafaf1; color: #27ae60; }
         .badge-fail { background-color: #fdedec; color: #e74c3c; }
+        .badge-warn { background-color: #fef9e7; color: #f39c12; }
     </style>
     """
 
@@ -69,32 +70,94 @@ class ReportGenerator:
             f.write(html)
 
     @classmethod
-    def generate_validations_html(cls, dataset_name: str, score: float, results: List[Dict[str, Any]], aggregation_results: List[Dict[str, Any]], output_file: str):
+    def generate_validations_html(cls, dataset_name: str, scores: Dict[str, float], results: List[Dict[str, Any]], aggregation_results: List[Dict[str, Any]], output_file: str):
         """Generates report_validations.html."""
         logger.info(f"Generating HTML Validations Report: {output_file}")
         
-        rows = ""
+        sections = {
+            "primary_key_check": {"title": "Primary Key Integrity", "rows": ""},
+            "uniqueness_check": {"title": "Business Keys Uniqueness", "rows": ""},
+            "null_check": {"title": "Null Value Checks", "rows": ""},
+            "domain_check": {"title": "Domain & Regex Checks", "rows": ""},
+            "numeric_check": {"title": "Numeric Range Checks", "rows": ""},
+            "date_check": {"title": "Date Format Validation", "rows": ""},
+            "schema_type_check": {"title": "Schema Type Validation", "rows": ""},
+            "duplicate_row_check": {"title": "Dataset Duplication Analysis", "rows": ""},
+            "volume_check": {"title": "Volume & Row Count Checks", "rows": ""},
+            "constant_check": {"title": "Constant Value Analysis", "rows": ""},
+            "outlier_check": {"title": "Outlier Detection", "rows": ""},
+            "empty_string_check": {"title": "Empty String Checks", "rows": ""},
+            "schema_drift": {"title": "Schema Drift Alerts", "rows": ""}
+        }
+
         for r in results:
-            status_class = "badge-pass" if r["status"] == "PASS" else "badge-fail"
-            details = ", ".join([f"{k}: {v}" for k, v in r.items() if k not in ["type", "status", "column", "columns"]])
+            rtype = r["type"]
+            if rtype not in sections:
+                # Fallback for any unknown types
+                sections[rtype] = {"title": f"{rtype.replace('_', ' ').title()}", "rows": ""}
+
+            if r["status"] == "PASS":
+                status_class = "badge-pass"
+            elif r["status"] == "WARN":
+                status_class = "badge-warn"
+            else:
+                status_class = "badge-fail"
+                
+            details = ", ".join([f"{k}: {v}" for k, v in r.items() if k not in ["type", "status", "column", "columns", "mandatory"]])
+            mandatory_badge = "<span class='badge badge-pass'>Yes</span>" if r.get("mandatory", True) else "<span class='badge badge-warn'>No</span>"
             col_display = r.get("column") or ", ".join(r.get("columns", []))
-            rows += f"<tr><td>{r['type']}</td><td>{col_display}</td><td><span class='badge {status_class}'>{r['status']}</span></td><td>{details}</td></tr>"
+            
+            sections[rtype]["rows"] += f"<tr><td>{col_display}</td><td>{mandatory_badge}</td><td><span class='badge {status_class}'>{r['status']}</span></td><td>{details}</td></tr>"
 
         agg_rows = ""
         for r in aggregation_results:
             status_class = "badge-pass" if r["status"] == "PASS" else "badge-fail"
             agg_rows += f"<tr><td>{', '.join(r['groups'])}</td><td><span class='badge {status_class}'>{r['status']}</span></td><td>{r['summary']}</td></tr>"
 
+        sections_html = ""
+        for rtype, info in sections.items():
+            if info["rows"]:
+                sections_html += f"""
+                <h2>{info['title']}</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    {info['rows']}
+                </table>
+                """
+
         html = f"""
         <html>
-        <head><title>Validations Report - {dataset_name}</title>{cls.BASE_STYLE}</head>
+        <head><title>Validations Report - {dataset_name}</title>{cls.BASE_STYLE}
+        <style>
+            .score-container {{ display: flex; justify-content: space-around; margin: 20px 0; }}
+            .score-card {{ background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; text-align: center; flex: 1; margin: 0 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
+            .score-card.final {{ border: 2px solid #3498db; background: #f0f8ff; }}
+            .score-title {{ font-size: 1.1em; color: #7f8c8d; margin-bottom: 10px; }}
+            .score-value {{ font-size: 2.5em; font-weight: bold; color: #2c3e50; }}
+            .score-value.fail {{ color: #e74c3c; }}
+            .score-value.pass {{ color: #27ae60; }}
+        </style>
+        </head>
         <body>
             <div class='container'>
                 <h1>Data Quality Report: {dataset_name}</h1>
-                <div class='score-box'>DQ Score: {score}%</div>
                 
-                <h2>Rules Summary</h2>
-                {f"<table><tr><th>Check Type</th><th>Target</th><th>Status</th><th>Details</th></tr>{rows}</table>" if rows else "<p class='card'>No data validation rules were provided. See the Profiling tab for automated analysis.</p>"}
+                <div class='score-container'>
+                    <div class='score-card'>
+                        <div class='score-title'>Technical Score</div>
+                        <div class='score-value {"pass" if scores.get("technical_score", 0) >= 90 else ("fail" if scores.get("technical_score", 0) < 70 else "")}'>{scores.get('technical_score', 0)}%</div>
+                    </div>
+                    <div class='score-card final'>
+                        <div class='score-title'><b>Final DQ Score</b></div>
+                        <div class='score-value {"pass" if scores.get("final_score", 0) >= 90 else ("fail" if scores.get("final_score", 0) < 70 else "")}'>{scores.get('final_score', 0)}%</div>
+                    </div>
+                    <div class='score-card'>
+                        <div class='score-title'>Analytical Score</div>
+                        <div class='score-value {"pass" if scores.get("analytical_score", 0) >= 90 else ("fail" if scores.get("analytical_score", 0) < 70 else "")}'>{scores.get('analytical_score', 0)}%</div>
+                    </div>
+                </div>
+                
+                {sections_html if sections_html else "<p class='card'>No data validation rules were provided. See the Profiling tab for automated analysis.</p>"}
 
                 {f"<h2>Aggregation Checks</h2><table><tr><th>Groups</th><th>Status</th><th>Sample Summary</th></tr>{agg_rows}</table>" if agg_rows else ""}
             </div>
@@ -237,6 +300,29 @@ class ReportGenerator:
                     <p><b>Duplicates Found:</b> {res['duplicate_count']} ({res['duplicate_percent']}%)</p>
                 </div>
                 """
+                
+            # Semantic Risk Component
+            semantic_risk_html = ""
+            risk_info = discovery_results.get("semantic_risk")
+            if risk_info:
+                risk_level = risk_info["risk_level"]
+                bg_color = "#fef9e7" if risk_level == "MEDIUM" else ("#fdedec" if risk_level == "HIGH" else "#eafaf1")
+                border_color = "#f39c12" if risk_level == "MEDIUM" else ("#e74c3c" if risk_level == "HIGH" else "#27ae60")
+                risk_icon = "⚠️" if risk_level in ["MEDIUM", "HIGH"] else "✅"
+                
+                false_uq_html = ""
+                if risk_info.get("false_uniqueness"):
+                    false_uq_html = f"<div style='margin-top:10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;'><p style='color: #856404; margin: 0;'><b>🚨 Semantic Alert: False Uniqueness Detected!</b> The technical primary key is unique, but business identifiers contain duplicates. This indicates a high risk of <b>Metric Inflation</b> in downstream BI tools.</p></div>"
+                
+                semantic_risk_html = f"""
+                <h2>Semantic Risk Analysis</h2>
+                <div class='card' style='background-color: {bg_color}; border-left: 5px solid {border_color};'>
+                    <h3 style='margin-top: 0;'>{risk_icon} Risk Level: {risk_level}</h3>
+                    <p><b>Maximum Business Duplication:</b> {risk_info['max_duplicate_percent']}%</p>
+                    {false_uq_html}
+                </div>
+                """
+                dedup_html = semantic_risk_html + dedup_html
 
         # 6. Discovery Group Analysis (Simplified JSON feature)
         group_html = ""

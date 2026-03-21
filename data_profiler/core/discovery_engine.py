@@ -237,12 +237,12 @@ class DiscoveryEngine:
         dedup_results = []
         
         # Include logic
-        includ_cols = config.get("dedupIncludeColumns")
+        includ_cols = config.get("dedup_include_columns") or config.get("dedupIncludeColumns")
         if includ_cols:
             dedup_results.append(self.check_deduplication(includ_cols, "Include Columns"))
             
         # Exclude logic
-        exclud_cols = config.get("dedupExcludeColumns")
+        exclud_cols = config.get("dedup_exclude_columns") or config.get("dedupExcludeColumns")
         if exclud_cols:
             all_cols = self.df.columns.tolist()
             target_cols = [c for c in all_cols if c not in exclud_cols]
@@ -250,6 +250,30 @@ class DiscoveryEngine:
             
         if dedup_results:
             self.results["deduplication"] = dedup_results
+
+            # Semantic Risk Auditor
+            max_dup_pct = 0.0
+            for dr in dedup_results:
+                if dr["status"] == "SUCCESS" and dr["duplicate_percent"] > max_dup_pct:
+                    max_dup_pct = dr["duplicate_percent"]
+                    
+            risk_level = "LOW"
+            if max_dup_pct > 20.0:
+                risk_level = "HIGH"
+            elif max_dup_pct > 5.0:
+                risk_level = "MEDIUM"
+                
+            # False Uniqueness Check: PK is valid but business columns are duplicated
+            false_uniqueness = False
+            pk_result = self.results.get("primary_key", {})
+            if pk_result.get("status") == "PASS" and max_dup_pct > 0:
+                false_uniqueness = True
+                
+            self.results["semantic_risk"] = {
+                "risk_level": risk_level,
+                "max_duplicate_percent": max_dup_pct,
+                "false_uniqueness": false_uniqueness
+            }
 
         # 4. Discovery Groups
         discovery_groups = config.get("group_by")

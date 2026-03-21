@@ -1,7 +1,16 @@
-id;nome;email;idade;data_cadastro;status;valor;loja
-1;Joao Silva;joao@example.com;25;01/01/2025;ATIVO;100.0;Loja A
-2;Maria Souza;maria@example.com;25;15/02/2025;ATIVO;200.0;Loja A
-3;Jose Santos;;45;01/03/2025;INATIVO;300.0;Loja B
-4;Ana Paula;ana@invalid;18;10/10/2025;ATIVO;400.0;Loja C
-5;Carlos Reis;carlos@example.com;-5;31/12/2024;PENDENTE;500.0;Loja A
-6;Joao Silva;jsilva@alt.com;26;02/01/2025;ATIVO;100.0;Loja B
+id;loja;nome;email;cpf;status;valor;idade;data_cadastro
+1;A;Ana Silva;ana@email.com;12345678901;ATIVO;150.50;29;2024-01-10
+2;A;Bruno Lima;bruno@email.com;12345678902;ATIVO;200.00;35;2024-02-15
+3;B;Carlos Souza;;12345678903;INATIVO;300.00;40;2024-03-20
+4;B;Daniela Rocha;daniela@email.com;12345678904;ATIVO;-50.00;28;2024-04-01
+5;C;Eduardo Alves;eduardo@email.com;12345678905;ATIVO;999999.99;45;2024-05-05
+6;C;Fernanda Costa;fernanda@email.com;12345678906;INATIVO;120.00;150;2024-06-10
+7;A; ;semnome@email.com;12345678907;ATIVO;80.00;32;2024-07-12
+8;A;Gustavo Pereira;gustavo@email.com;12345678901;ATIVO;90.00;38;2024-08-20
+9;B;Helena Martins;helena@email.com;12345678909;PENDENTE;110.00;27;2024-09-25
+10;B;Igor Santos;igor@email.com;12345678910;ATIVO;0.00;22;2024-10-30
+11;C;Juliana Mendes; ;12345678911;ATIVO;130.00;31;2024-11-11
+12;C;Kevin Oliveira;kevin@email.com;12345678912;ATIVO;75.00;;2024-12-01
+13;A;Larissa Gomes;larissa@email.com;12345678913;ATIVO;60.00;29;
+14;A;Marcos Paulo;marcos@email.com;12345678914;ATIVO;85.00;33;2024-02-02
+15;B;Natalia Ribeiro;natalia@email.com;12345678915;INATIVO;95.00;41;2024-03-03

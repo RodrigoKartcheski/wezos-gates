@@ -34,31 +34,32 @@ Define de onde os dados serão lidos. Pode ser configurado na raiz do JSON ou de
 ---
 
 ### 2. Validações de Qualidade (`validations`)
-Esta seção define as regras de "saúde" dos dados. Se uma regra falhar, o status final será **FAIL**.
+Esta seção define as regras de "saúde" dos dados. 
+
+**Novidade**: Agora você pode usar a flag `"mandatory": true/false` (padrão: `true`). Se uma regra for `false` e falhar, ela gerará apenas um **WARN** no relatório, sem invalidar o pipeline completo.
 
 ```json
 "validations": {
-  "primary_key": ["id", "loja"],         // Verifica unicidade (simples ou composta)
-  "null_checks": [                       // Chega percentual de nulos
-    { "column": "email", "max_percent": 0.5 } 
+  "primary_key": { "columns": ["id"], "mandatory": true }, // Unicidade obrigatória
+  "null_checks": [
+    { "column": "email", "max_percent": 0.5, "mandatory": false } // Aviso se falhar
   ],
-  "domain_checks": [                     // Verifica valores permitidos ou Regex
+  "domain_checks": [
     { 
       "column": "status", 
       "allowed_values": ["ATIVO", "INATIVO"],
-      "regex": "^[A-Z]+$"
+      "mandatory": true 
     }
   ],
-  "numeric_checks": [                    // Valida faixas numéricas
-    { "column": "valor", "min": 0, "max": 1000, "allow_negative": false }
+  "numeric_checks": [
+    { "column": "valor", "min": 0, "mandatory": true }
   ],
-  "volume_checks": {                     // Valida quantidade total de linhas
+  "volume_checks": {
     "min_rows": 100,
-    "max_rows": 1000000
+    "mandatory": true
   },
-  "constant_checks": ["coluna_fixa"],    // Avisa se a coluna tiver apenas 1 valor unico
-  "outlier_checks": ["*"],               // Detecta outliers (Z-Score > 3) em colunas numericas
-  "empty_string_checks": ["nome"]        // Detecta strings vazias ou apenas espaços
+  "outlier_checks": { "columns": ["*"], "mandatory": false }, // Apenas informativo
+  "empty_string_checks": { "columns": ["nome"], "mandatory": true }
 }
 ```
 

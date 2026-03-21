@@ -1,0 +1,9 @@
+id;loja;nome;cpf;email;status;valor;data_cadastro;idade
+101;A;Ricardo Silva;12345678901;ricardo@teste.com;ATIVO;1500.00;2023-01-10;35
+102;B;Ana Souza;23456789012;ana@empresa.com;ATIVO;2100.50;2023-02-15;42
+103;C;Carlos Luz;34567890123;carlos@servidor.net;INATIVO;0.00;2023-03-20;55
+104;A;Beatriz Cruz;45678901234;beatriz@web.com;ATIVO;950.00;2023-01-12;28
+105;B;Marcio Reus;56789012345;marcio@teste.com;ATIVO;1200.00;2023-02-18;31
+101;A;Erro Chave Primaria;12345678901;erro@teste.com;ATIVO;100.00;2023-04-01;40
+107;D;Erro Loja Dominio;77788899900;loja@erro.com;ATIVO;50.00;2023-04-02;45
+108;B;Email Invalido;88899900011;email_sem_arroba;ATIVO;10.00;2023-04-03;38

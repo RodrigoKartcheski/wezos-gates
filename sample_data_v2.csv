@@ -1,0 +1,11 @@
+id;loja;nome;email;idade;data_cadastro
+1;SP01;Ana Silva;ana.silva@email.com;29;2024-01-10
+2;SP02;Bruno Souza;bruno.souza@email.com;35;2024-02-15
+3;SP01;Carlos Lima;;42;2024-03-20
+4;SP03;Daniela Costa;daniela.costa@email.com;;2024-04-25
+5;SP02;Eduardo Alves;eduardo.alves@email.com;31;2024-05-30
+6;SP01;Fernanda Rocha;fernanda.rocha@email.com;27;2024-06-05
+7;SP03;Gabriel Martins;gabriel.martins@email.com;38;2024-07-12
+8;SP02;Helena Ribeiro;helena.ribeiro@email.com;33;2024-08-18
+9;SP01;Igor Fernandes;;45;2024-09-22
+10;SP03;Juliana Mendes;juliana.mendes@email.com;29;2024-10-01

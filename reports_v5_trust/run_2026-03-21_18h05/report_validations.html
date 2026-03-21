@@ -1,0 +1,112 @@
+
+        <html>
+        <head><title>Validations Report - sample_data_v5.csv</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .status-pass { color: #27ae60; font-weight: bold; }
+        .status-fail { color: #e74c3c; font-weight: bold; }
+        .score-box { font-size: 2.5em; font-weight: bold; color: #3498db; text-align: center; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; color: #555; }
+        tr:hover { background-color: #f1f1f1; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; }
+        .badge-pass { background-color: #eafaf1; color: #27ae60; }
+        .badge-fail { background-color: #fdedec; color: #e74c3c; }
+        .badge-warn { background-color: #fef9e7; color: #f39c12; }
+    </style>
+    
+        <style>
+            .score-container { display: flex; justify-content: space-around; margin: 20px 0; }
+            .score-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; text-align: center; flex: 1; margin: 0 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            .score-card.final { border: 2px solid #3498db; background: #f0f8ff; }
+            .score-title { font-size: 1.1em; color: #7f8c8d; margin-bottom: 10px; }
+            .score-value { font-size: 2.5em; font-weight: bold; color: #2c3e50; }
+            .score-value.fail { color: #e74c3c; }
+            .score-value.pass { color: #27ae60; }
+        </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h1>Data Quality Report: sample_data_v5.csv</h1>
+                
+                <div class='score-container'>
+                    <div class='score-card'>
+                        <div class='score-title'>Technical Score</div>
+                        <div class='score-value pass'>100.0%</div>
+                    </div>
+                    <div class='score-card final'>
+                        <div class='score-title'><b>Final DQ Score</b></div>
+                        <div class='score-value '>88.37%</div>
+                    </div>
+                    <div class='score-card'>
+                        <div class='score-title'>Analytical Score</div>
+                        <div class='score-value fail'>33.33%</div>
+                    </div>
+                </div>
+                
+                
+                <h2>Primary Key Validation</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>id, loja</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>duplicate_count: 0</td></tr>
+                </table>
+                
+                <h2>Null Value Checks</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>id</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>nome</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>email</td><td><span class='badge badge-warn'>No</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>status</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>valor</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>loja</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>data_cadastro</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr><tr><td>idade</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>null_count: 0, null_percent: 0.00%, threshold: 0%</td></tr>
+                </table>
+                
+                <h2>Domain & Regex Checks</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>status</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0</td></tr><tr><td>loja</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0</td></tr><tr><td>email</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0</td></tr>
+                </table>
+                
+                <h2>Numeric Range Checks</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>valor</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0</td></tr><tr><td>idade</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0</td></tr>
+                </table>
+                
+                <h2>Date Format Validation</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>data_cadastro</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>invalid_count: 0, format: %Y-%m-%d</td></tr>
+                </table>
+                
+                <h2>Schema Type Validation</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>id</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: int, actual: int64</td></tr><tr><td>loja</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: string, actual: object</td></tr><tr><td>nome</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: string, actual: object</td></tr><tr><td>email</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: string, actual: object</td></tr><tr><td>idade</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: int, actual: int64</td></tr><tr><td>data_cadastro</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>expected: date, actual: object</td></tr>
+                </table>
+                
+                <h2>Dataset Duplication Analysis</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td></td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>duplicate_count: 0</td></tr>
+                </table>
+                
+                <h2>Volume & Row Count Checks</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td></td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-pass'>PASS</span></td><td>row_count: 10, min_rows: 1, max_rows: 1000000</td></tr>
+                </table>
+                
+                <h2>Uniqueness Check</h2>
+                <table>
+                    <tr><th>Target</th><th>Mandatory</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>cpf</td><td><span class='badge badge-pass'>Yes</span></td><td><span class='badge badge-fail'>FAIL</span></td><td>duplicate_count: 3</td></tr>
+                </table>
+                
+
+                
+            </div>
+        </body>
+        </html>
+        

@@ -1,0 +1,11 @@
+id;loja;nome;email;status;valor;data_cadastro;idade;cpf
+1;A;Ana Silva;ana.silva@email.com;ATIVO;100.50;2024-01-10;29;12345678901
+2;B;Bruno Souza;bruno.souza@email.com;INATIVO;200.00;2024-02-15;35;23456789012
+3;A;Carlos Lima;carlos.lima@email.com;ATIVO;150.75;2024-03-20;42;34567890123
+4;C;Daniela Costa;daniela.costa@email.com;ATIVO;300.10;2024-04-25;31;45678901234
+5;B;Eduardo Alves;eduardo.alves@email.com;INATIVO;50.00;2024-05-30;28;56789012345
+6;A;Fernanda Rocha;fernanda.rocha@email.com;ATIVO;500.00;2024-06-05;27;67890123456
+7;C;Gabriel Martins;gabriel.martins@email.com;ATIVO;120.00;2024-07-12;38;78901234567
+8;B;Helena Ribeiro;helena.ribeiro@email.com;INATIVO;80.00;2024-08-18;33;89012345678
+9;A;Igor Fernandes;igor.fernandes@email.com;ATIVO;60.00;2024-09-22;45;90123456789
+10;C;Juliana Mendes;juliana.mendes@email.com;ATIVO;90.00;2024-10-01;29;01234567890
