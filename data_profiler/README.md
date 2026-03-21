@@ -14,6 +14,24 @@ A ferramenta é especialmente útil em arquiteturas de dados com camadas **RAW �
 
 ---
 
+## 🛠️ Instalação e Build
+
+### Requisitos
+- Python 3.10+
+- Bibliotecas listadas em `requirements.txt`:
+```bash
+pip install -r requirements.txt
+```
+
+### Gerar Executável (Windows)
+Para gerar o seu `.exe` localmente, execute o script de build:
+```bash
+bash build_exe.sh
+```
+O arquivo será gerado em: `dist/data-profiler.exe`.
+
+---
+
 ## Funcionalidades Principais
 
 - Inferência automática de tipos: boolean, integer, float, datetime, string, categorical
@@ -34,167 +52,158 @@ A ferramenta é especialmente útil em arquiteturas de dados com camadas **RAW �
 
 ---
 
-## Instalação
+# Guia de Uso: data-profiler (Data Quality Executable)
 
-### Requisitos
-
-- Python 3.10+
-- Bibliotecas listadas em `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
-### Build do Executável
-```bash
-bash build_exe.sh
-```
-
-O executável será gerado em:
-`dist/data-profiler.exe`
+Este documento descreve todas as possibilidades de configuração e uso do pacote `data-profiler`. A ferramenta é projetada para validar a qualidade dos dados e realizar descobertas exploratórias em arquivos CSV ou tabelas BigQuery.
 
 ---
 
-## Modos de Execução
+## 🚀 Como Iniciar
 
-### CLI (Humano)
+A configuração principal é feita através de um arquivo JSON (como o `seu_config.json`). Você pode executar a ferramenta apontando para este arquivo:
 
-Parâmetros principais:
-
-| Parâmetro | Tipo | Descrição |
-| :--- | :--- | :--- |
-| --source | csv ou bigquery | Origem dos dados |
-| --file | string | Caminho do CSV |
-| --project | string | Projeto BigQuery |
-| --dataset | string | Dataset BigQuery |
-| --table | string | Tabela BigQuery |
-| --columns | lista | Colunas específicas a validar |
-| --where | string | Filtro SQL opcional |
-| --config | string | Arquivo JSON de regras |
-| --check-nulls | lista | Colunas para checar nulos |
-| --group-by | lista | Colunas para agregações |
-| --agg | lista | Funções de agregação (count, sum, avg, min, max) |
-| --limit | int | Limite de linhas para teste |
-| --output | string | Pasta para salvar relatórios |
-| --mcp | bool | Ativa modo MCP server para IA |
-
-#### Exemplo CSV
 ```bash
-data-profiler.exe \
---source csv \
---file sample/clientes.csv \
---check-nulls email,telefone \
---group-by status \
---agg count,sum \
---output reports/
+.\data-profiler.exe --config seu_config.json --output reports/
 ```
-
-### Saída do Executável
-
-O executável gera 5 arquivos HTML na pasta de output:
-
-```text
-reports/
-├── dashboard.html                    <-- Fácil acesso (Sempre o mais recente)
-├── 2026-03-13_17h50_dashboard.html   <-- Histórico com timestamp
-├── 2026-03-13_17h50_report_schema.html
-├── 2026-03-13_17h50_report_validations.html
-└── 2026-03-13_17h50_report_profiling.html
-```
-
-- **Unified Dashboard**: O arquivo `dashboard.html` é o ponto de entrada principal que contém as abas navegáveis.
-- **Histórico**: Os arquivos com timestamp são mantidos para auditoria e histórico de execuções passadas.
 
 ---
 
-## MCP Server (Integração IA)
+## 🛠️ Estrutura do Arquivo de Configuração (JSON)
 
-Ativar:
-```bash
-data-profiler.exe --mcp
-```
+O arquivo de configuração é dividido em seções principais. Abaixo, detalhamos cada uma delas.
 
-Ferramentas disponíveis: `load_dataset`, `infer_schema`, `run_validation`, `profile_dataset`.
+### 1. Origem dos Dados (`source`)
+Define de onde os dados serão lidos. Pode ser configurado na raiz do JSON ou dentro de um objeto `"source"`.
+
+| Campo | Tipo | Descrição | Exemplo |
+| :--- | :--- | :--- | :--- |
+| `type` | string | `csv` ou `bigquery` | `"csv"` |
+| `file` | string | Caminho do arquivo (se for CSV) | `"dados.csv"` |
+| `sep` | string | Separador do CSV (padrão: `,`) | `";"` |
+| `encoding`| string | Codificação (padrão: `utf-8`) | `"latin1"` |
+| `project` | string | ID do projeto no Google Cloud (BQ) | `"v-projeto"` |
+| `dataset` | string | Nome do dataset no BigQuery | `"v-dataset"` |
+| `table` | string | Nome da tabela no BigQuery | `"v-tabela"` |
 
 ---
 
-## Arquivo de Configuração JSON
+### 2. Validações de Qualidade (`validations`)
+Esta seção define as regras de "saúde" dos dados. 
+
+**Novidade**: Agora você pode usar a flag `"mandatory": true/false` (padrão: `true`). Se uma regra for `false` e falhar, ela gerará apenas um **WARN** no relatório, sem invalidar o pipeline completo.
 
 ```json
-{
-  "source": { "type": "csv", "file": "clientes.csv" },
-  "validations": {
-    "primary_key": ["id_cliente"],
-    "null_checks": [{ "column": "email", "max_percent": 0 }]
-  }
+"validations": {
+  "primary_key": { "columns": ["id"], "mandatory": true }, // Unicidade obrigatória
+  "null_checks": [
+    { "column": "email", "max_percent": 0.5, "mandatory": false } // Aviso se falhar
+  ],
+  "domain_checks": [
+    { 
+      "column": "status", 
+      "allowed_values": ["ATIVO", "INATIVO"],
+      "mandatory": true 
+    }
+  ],
+  "numeric_checks": [
+    { "column": "valor", "min": 0, "mandatory": true }
+  ],
+  "volume_checks": {
+    "min_rows": 100,
+    "mandatory": true
+  },
+  "outlier_checks": { "columns": ["*"], "mandatory": false }, // Apenas informativo
+  "empty_string_checks": { "columns": ["nome"], "mandatory": true }
 }
 ```
 
-Executar:
+---
+
+### 3. Descoberta de Dados (`discovery`)
+Focada em metadados e análise exploratória.
+
+> [!IMPORTANT]
+> **Integrated Trust Workflow**: Agora, o Discovery e as Análises Analíticas são realizados **apenas nos dados que passaram nas validações obrigatórias** (`mandatory: true`). Isso garante que os seus insights de BI (médias, contagens por loja, deduplicação) não sejam poluídos por registros tecnicamente inválidos que não deveriam estar no dataset final.
+
+```json
+"discovery": {
+  "filter": "idade > 18 AND status = 'ATIVO' AND nome LIKE 'A%'", // Filtro SQL para análise exploratória
+  "detect_keys": true,                   // Tenta encontrar chaves primárias automaticamente
+  "group_by": ["categoria", ["uf", "cidade"]], // Gera frequências para colunas ou grupos
+  "date_analysis": ["data_venda"],       // Analisa distribuição temporal e datas máximas
+  "dedupIncludeColumns": ["cpf"],        // Checa duplicidade considerando APENAS estas colunas
+  "dedupExcludeColumns": ["id", "data"]  // Checa duplicidade considerando TODAS exceto estas
+}
+```
+
+---
+
+### 4. Profiling (`profiling`) e Drift
+- **Profiling**: Gera um relatório profundo de distribuições e correlações usando `ydata-profiling`.
+- **Reference**: Permite comparar o dataset atual com uma versão de referência para detectar **Data Drift** (mudança estatística nos dados).
+
+```json
+"profiling": {
+  "title": "Perfil de Clientes 2024",
+  "filter": "data > '2024-01-01'"
+},
+"reference": {
+  "type": "csv",
+  "file": "dados_ontem.csv"
+}
+```
+
+---
+
+## 💻 Interface de Linha de Comando (CLI)
+
+Além do JSON, você pode passar parâmetros diretamente no terminal:
+
+- `--source`: `csv` ou `bigquery`
+- `--file`: Caminho do arquivo CSV
+- `--project`, `--dataset`, `--table`: Credenciais BigQuery
+- `--check-nulls`: Lista de colunas separadas por vírgula
+- `--group-by`: Colunas para frequência
+- `--output`: Pasta onde os relatórios HTML serão salvos
+
+**Exemplo Rápido:**
 ```bash
-data-profiler.exe --config rules.json --output reports/
+.\data-profiler.exe --source csv --file sample.csv --check-nulls email --output reports/
 ```
 
 ---
 
-## Boas Práticas
+## 📊 Relatórios Modulares (Comportamento Dinâmico)
 
-1. **Validar RAW primeiro** para garantir tipos e detectar drift precocemente.
-2. **Histórico**: Armazene os relatórios HTML em pastas datadas para auditoria de regressão.
-3. **Dashboards**: Integre os links dos HTMLs em seus portais de monitoramento de dados.
+O `data-profiler` utiliza uma abordagem de **renderização modular**. Isso significa que o relatório final (`report_validations.html` e `report_discovery.html`) só exibirá as seções que foram explicitamente configuradas no seu JSON.
+
+- **Seção Omitida no JSON**: Se você não definir `volume_checks`, essa tabela não aparecerá no relatório, mantendo-o limpo e focado no que importa para aquela análise específica.
+- **Discovery Básico**: Por padrão, o motor sempre exibe estatísticas de cardinalidade (`Distinct Values Count`) para dar contexto, mas análises avançadas (PK Detection, Deduplicação, Grupos) só aparecem se as chaves correspondentes forem ativadas.
 
 ---
 
-## Contato e Suporte
+## 📊 Relatórios Gerados
 
-**Time de Engenharia de Dados**
-**Git Issues**: [repo-link]
+A ferramenta gera um dashboard interativo único:
+1. `dashboard.html`: Ponto de entrada central.
+2. `report_schema.html`: Análise de tipos e drift de schema.
+3. `report_validations.html`: Resultados detalhados de cada regra de DQ.
+4. `report_discovery.html`: Chaves candidatas, duplicatas e grupos.
+5. `report_profiling.html`: Estatísticas profundas da biblioteca de profiling.
 
-Abrir o README.md
-start .\data_profiler\README.md
+---
 
+```bash
+.\data-profiler.exe --mcp
+```
 
-Rodar o executavel
-.\data-profiler.exe --source csv --file sample_data.csv --output reports/
+---
 
-.\data-profiler.exe --source csv --config seu_config.json --output reports
+## 🧪 Desenvolvimento Local (Teste)
 
-start reports/dashboard.html
+Para rodar o motor via código (Powershell) e validar alterações rapidamente sem precisar do build:
 
-exemplos de json:
--- source csv
-{
-  "file": "repro_data.csv",
-  "group_by": ["category"]
-}
-
--- source bigquery
-{
-  "project": "your-project",
-  "dataset": "your-dataset",
-  "table": "your-table"
-}
-
--- source bigquery
-{
-  "project": "your-project",
-  "dataset": "your-dataset",
-  "table": "your-table",
-  "group_by": ["category"]
-}
-
--- source bigquery com referencia
-{
-  "project": "your-project",
-  "dataset": "your-dataset",
-  "table": "your-table",
-  "reference": {
-    "project": "your-project",
-    "dataset": "your-dataset",
-    "table": "your-table"
-  }
-}
-
-# TESTE LOCAL
+```powershell
 $env:PYTHONPATH = "c:\Temp\wezos-gates"
-python c:\Temp\wezos-gates\data_profiler\interfaces\cli.py --source csv --config c:\Temp\wezos-gates\seu_config.json --output c:\Temp\wezos-gates\reports_test
+python .\data_profiler\interfaces\cli.py --source csv --config .\seu_config_v6.json --output .\reports_test
+```

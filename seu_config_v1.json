@@ -1,5 +1,5 @@
 {
-  "file": "sample_data.csv",
+  "file": "sample_data_v1.csv",
   "sep": ";",
   "validations": {
     "primary_key": [

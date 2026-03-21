@@ -68,6 +68,9 @@ Esta seção define as regras de "saúde" dos dados.
 ### 3. Descoberta de Dados (`discovery`)
 Focada em metadados e análise exploratória.
 
+> [!IMPORTANT]
+> **Integrated Trust Workflow**: Agora, o Discovery e as Análises Analíticas são realizados **apenas nos dados que passaram nas validações obrigatórias** (`mandatory: true`). Isso garante que os seus insights de BI (médias, contagens por loja, deduplicação) não sejam poluídos por registros tecnicamente inválidos que não deveriam estar no dataset final.
+
 ```json
 "discovery": {
   "filter": "idade > 18 AND status = 'ATIVO' AND nome LIKE 'A%'", // Filtro SQL para análise exploratória
@@ -113,6 +116,15 @@ Além do JSON, você pode passar parâmetros diretamente no terminal:
 ```bash
 .\data-profiler.exe --source csv --file sample.csv --check-nulls email --output reports/
 ```
+
+---
+
+## 📊 Relatórios Modulares (Comportamento Dinâmico)
+
+O `data-profiler` utiliza uma abordagem de **renderização modular**. Isso significa que o relatório final (`report_validations.html` e `report_discovery.html`) só exibirá as seções que foram explicitamente configuradas no seu JSON.
+
+- **Seção Omitida no JSON**: Se você não definir `volume_checks`, essa tabela não aparecerá no relatório, mantendo-o limpo e focado no que importa para aquela análise específica.
+- **Discovery Básico**: Por padrão, o motor sempre exibe estatísticas de cardinalidade (`Distinct Values Count`) para dar contexto, mas análises avançadas (PK Detection, Deduplicação, Grupos) só aparecem se as chaves correspondentes forem ativadas.
 
 ---
 
