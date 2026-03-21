@@ -1,8 +1,10 @@
 {
   "file": "sample_data.csv",
+  "sep": ";",
   "validations": {
     "primary_key": [
-      "id"
+      "id",
+      "loja"
     ],
     "null_checks": [
       {
@@ -26,7 +28,8 @@
       "status",
       "email",
       "idade",
-      "data_cadastro"
+      "data_cadastro",
+      "loja"
     ]
   }
 }
