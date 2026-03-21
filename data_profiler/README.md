@@ -138,6 +138,44 @@ Focada em metadados e análise exploratória.
 
 ---
 
+## 📖 Detalhamento de Funções & Exemplos de Uso
+
+Abaixo, explicamos o que cada bloco de configuração faz e como usá-lo para garantir a integridade dos seus dados.
+
+### 🛡️ Seção: Validações (`validations`)
+O objetivo aqui é garantir a **integridade técnica** do dataset.
+
+| Função | Descrição | Exemplo de JSON |
+| :--- | :--- | :--- |
+| `primary_key` | Valida se uma ou mais colunas formam uma chave única sem duplicatas. | `"primary_key": ["id", "loja"]` |
+| `null_checks` | Checa nulos em colunas críticas. Suporta `max_percent` (ex: 0.1 = 10%). | `{"column": "email", "max_percent": 0.05}` |
+| `domain_checks`| Garante que os valores de uma coluna estejam em uma lista permitida. | `{"column": "status", "allowed_values": ["A", "B"]}` |
+| `numeric_checks`| Valida faixas de valores (mínimo e máximo) para colunas numéricas. | `{"column": "valor", "min": 0, "max": 1000}` |
+| `outlier_checks`| Identifica valores fora da curva (Z-Score > 3). Útil para capturar erros de digitação. | `"outlier_checks": {"columns": ["*"], "mandatory": false}` |
+| `date_check` | Valida se o formato da data é consistente com o esperado (ex: YYYY-MM-DD). | `{"column": "data_venda", "format": "%Y-%m-%d"}` |
+| `duplicate_check`| Checa se existem linhas no dataset que são duplicatas exatas de outras. | `"duplicate_check": true` |
+
+> [!TIP]
+> Use `"mandatory": false` em regras secundárias (como outliers) para gerar apenas alertas (**WARN**) sem derrubar o score técnico global.
+
+---
+
+### 🔍 Seção: Descoberta (`discovery`)
+O objetivo aqui é extrair **insights analíticos** e garantir a **confiança semântica**.
+
+| Função | Descrição | Exemplo de JSON |
+| :--- | :--- | :--- |
+| `detect_keys` | O motor usa IA para sugerir possíveis chaves primárias que você ainda não mapeou. | `"detect_keys": true` |
+| `group_by` | Gera a distribuição (frequência) de valores para entender a volumetria de negócio. | `"group_by": ["status", "loja"]` |
+| `filter` | Aplica um filtro SQL (WHERE) antes de realizar as análises exploratórias. | `"filter": "idade > 30"` |
+| `dedupIncludeColumns`| **Auditoria Semântica**: Verifica se há duplicidade considerando apenas colunas de negócio (ex: CPF). | `"dedupIncludeColumns": ["cpf"]` |
+| `date_analysis` | Analisa a distribuição das datas e identifica a data máxima (Max Date) do dataset. | `"date_analysis": ["data_cadastro"]` |
+
+> [!IMPORTANT]
+> **Trust Integrado**: Se uma linha falhar em uma validação técnica `"mandatory": true`, ela é **automaticamente excluída** das análises de Discovery. Isso evita que insights de BI sejam gerados em cima de dados "sujos".
+
+---
+
 ### 4. Profiling (`profiling`) e Drift
 - **Profiling**: Gera um relatório profundo de distribuições e correlações usando `ydata-profiling`.
 - **Reference**: Permite comparar o dataset atual com uma versão de referência para detectar **Data Drift** (mudança estatística nos dados).
