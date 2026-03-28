@@ -19,6 +19,6 @@ pyinstaller \
 --hidden-import matplotlib.backends.backend_agg \
 --collect-all ydata_profiling \
 --collect-all matplotlib \
-../main.py
+__main__.py
 
 echo "Build complete. Executable can be found in the dist/ folder."

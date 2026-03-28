@@ -21,6 +21,8 @@ from sentinel_gate.core.validation_engine import (
     ValidationEngine,
     ResultCollector,
     ValidationResult,
+    BaseExecutionEngine,
+    PandasExecutionEngine,
     _validate_expression,
 )
 from sentinel_gate.core.discovery_engine import DiscoveryEngine
@@ -230,6 +232,39 @@ class TestRuleRegistry(unittest.TestCase):
         self.assertIn("domain_check", types)
         self.assertIn("numeric_check", types)
         self.assertIn("duplicate_row_check", types)
+
+
+class TestExecutionEngine(unittest.TestCase):
+    """Tests for the execution engine abstraction layer."""
+
+    def test_pandas_engine_row_count(self):
+        df = pd.DataFrame({"A": [1, 2, 3]})
+        engine = PandasExecutionEngine(df)
+        self.assertEqual(engine.get_row_count(), 3)
+
+    def test_pandas_engine_get_columns(self):
+        df = pd.DataFrame({"id": [1], "name": ["a"]})
+        engine = PandasExecutionEngine(df)
+        self.assertEqual(engine.get_columns(), ["id", "name"])
+
+    def test_pandas_engine_has_column(self):
+        df = pd.DataFrame({"id": [1]})
+        engine = PandasExecutionEngine(df)
+        self.assertTrue(engine.has_column("id"))
+        self.assertFalse(engine.has_column("nonexistent"))
+
+    def test_base_engine_raises(self):
+        base = BaseExecutionEngine()
+        with self.assertRaises(NotImplementedError):
+            base.get_row_count()
+        with self.assertRaises(NotImplementedError):
+            base.get_columns()
+
+    def test_validation_engine_uses_engine(self):
+        df = pd.DataFrame({"A": [1, 2, 3]})
+        ve = ValidationEngine(df)
+        self.assertIsInstance(ve.engine, PandasExecutionEngine)
+        self.assertEqual(ve.engine.get_row_count(), 3)
 
 
 if __name__ == "__main__":

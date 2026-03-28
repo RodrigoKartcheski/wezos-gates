@@ -24,6 +24,6 @@ pyinstaller `
     --collect-all ydata_profiling `
     --collect-all matplotlib `
     --clean `
-    ..\main.py
+    __main__.py
 
 Write-Host "Build complete! Check the dist/ folder for data-profiler.exe" -ForegroundColor Green

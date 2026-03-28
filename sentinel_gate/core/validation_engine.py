@@ -114,16 +114,74 @@ def _validate_expression(equation: str):
 
 
 # ---------------------------------------------------------------------------
-# 4. Validation Engine
+# 4. Execution Engine Abstraction (Minimal)
+# ---------------------------------------------------------------------------
+# NOTE:
+# This is a minimal abstraction layer to prepare for future multi-engine support.
+# Complex operations (eval, groupby, regex, lookup) intentionally remain in Pandas.
+# Future: implement SparkExecutionEngine, DuckDBExecutionEngine, etc.
+
+class BaseExecutionEngine:
+    """Minimal interface for data execution primitives.
+
+    Concrete engines must implement these methods to support
+    different data backends (Pandas, Spark, DuckDB, Polars, etc.).
+    """
+
+    def get_row_count(self) -> int:
+        """Returns the number of rows in the active dataset."""
+        raise NotImplementedError
+
+    def get_columns(self) -> List[str]:
+        """Returns the list of column names in the active dataset."""
+        raise NotImplementedError
+
+    def has_column(self, column: str) -> bool:
+        """Checks if a column exists in the active dataset."""
+        return column in self.get_columns()
+
+    def get_dataframe(self):
+        """Returns the underlying data object for engine-specific operations.
+
+        Future: this method may be delegated to other execution engines (Spark, DuckDB).
+        """
+        raise NotImplementedError
+
+
+class PandasExecutionEngine(BaseExecutionEngine):
+    """Concrete execution engine backed by Pandas DataFrame."""
+
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
+    def get_row_count(self) -> int:
+        return len(self._df)
+
+    def get_columns(self) -> List[str]:
+        return self._df.columns.tolist()
+
+    def get_dataframe(self) -> pd.DataFrame:
+        return self._df
+
+    def set_dataframe(self, df: pd.DataFrame):
+        """Replaces the internal working dataframe (used by filters)."""
+        self._df = df
+
+
+# ---------------------------------------------------------------------------
+# 5. Validation Engine
 # ---------------------------------------------------------------------------
 class ValidationEngine:
     """Enterprise-grade engine for running data quality validations."""
 
     def __init__(self, df: pd.DataFrame):
-        # State Immutability: original df is stored read-only; all ops use _working_df
+        # State Immutability: original df is stored read-only; all ops use engine
         self._original_df = df
         self._working_df = df.copy()
         self.original_row_count = len(df)
+
+        # Execution engine (Pandas-first, prepared for future multi-engine)
+        self.engine = PandasExecutionEngine(self._working_df)
 
         # Execution context for Airflow/observability correlation
         self._execution_id = str(uuid.uuid4())[:8]
@@ -192,9 +250,14 @@ class ValidationEngine:
     # ------------------------------------------------------------------
     # Filter
     # ------------------------------------------------------------------
+    def _has_column(self, col: str) -> bool:
+        """Delegates column existence check to the execution engine."""
+        return self.engine.has_column(col)
+
     def apply_filter(self, filter_query: str):
         """Applies a SQL-like filter to the WORKING dataframe (never mutates original)."""
         self._working_df = apply_sql_filter(self._working_df, filter_query)
+        self.engine.set_dataframe(self._working_df)
         return self._working_df
 
     # ------------------------------------------------------------------
@@ -208,7 +271,7 @@ class ValidationEngine:
             mandatory = rule.get("mandatory", True)
             max_percent = rule.get("max_percent", 0)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 logger.error(f"[{self._execution_id}] Column '{col}' not found for null_check")
                 self._build_result(
                     check_type="null_check", passed=False, mandatory=mandatory,
@@ -222,7 +285,8 @@ class ValidationEngine:
                 null_mask = null_mask | (df[col].astype(str).str.strip() == "")
 
             null_count = int(null_mask.sum())
-            null_percent = (null_count / len(df)) * 100 if len(df) > 0 else 0
+            row_count = self.engine.get_row_count()
+            null_percent = (null_count / row_count) * 100 if row_count > 0 else 0
 
             effective_threshold = max_percent
             if 0 < max_percent <= 1.0:
@@ -257,7 +321,7 @@ class ValidationEngine:
             mandatory = primary_key_config.get("mandatory", True)
             rtype = primary_key_config.get("type", "primary_key_check")
 
-        missing_cols = [c for c in primary_keys if c not in df.columns]
+        missing_cols = [c for c in primary_keys if not self._has_column(c)]
         if missing_cols:
             logger.error(f"[{self._execution_id}] Columns {missing_cols} not found for uniqueness check")
             self._build_result(
@@ -268,7 +332,8 @@ class ValidationEngine:
             return
 
         duplicate_count = int(df.duplicated(subset=primary_keys).sum())
-        dup_pct = f"{(duplicate_count / len(df) * 100):.2f}%" if len(df) > 0 else "0.00%"
+        row_count = self.engine.get_row_count()
+        dup_pct = f"{(duplicate_count / row_count * 100):.2f}%" if row_count > 0 else "0.00%"
 
         self._build_result(
             check_type=rtype,
@@ -288,7 +353,7 @@ class ValidationEngine:
             regex = rule.get("regex")
             mandatory = rule.get("mandatory", True)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 logger.error(f"[{self._execution_id}] Column '{col}' not found for domain_check")
                 self._build_result(
                     check_type="domain_check", passed=False, mandatory=mandatory,
@@ -336,7 +401,7 @@ class ValidationEngine:
             allow_negative = rule.get("allow_negative", True)
             mandatory = rule.get("mandatory", True)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 logger.error(f"[{self._execution_id}] Column '{col}' not found for numeric_check")
                 self._build_result(
                     check_type="numeric_check", passed=False, mandatory=mandatory,
@@ -369,7 +434,7 @@ class ValidationEngine:
     def validate_volume(self, volume_config: Dict[str, Any]):
         """Checks total row count against min/max thresholds."""
         df = self._working_df
-        row_count = len(df)
+        row_count = self.engine.get_row_count()
         min_rows = volume_config.get("min_rows")
         max_rows = volume_config.get("max_rows")
         mandatory = volume_config.get("mandatory", True)
@@ -391,10 +456,10 @@ class ValidationEngine:
         """Identifies columns that have only one unique value."""
         df = self._working_df
         if "*" in columns:
-            columns = df.columns.tolist()
+            columns = self.engine.get_columns()
 
         for col in columns:
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
             nunique = df[col].nunique(dropna=False)
             if nunique == 1:
@@ -420,10 +485,11 @@ class ValidationEngine:
             method = outlier_config.get("method", "z-score")
 
         if "*" in columns:
+            # Future: this type-based filter may be delegated to other execution engines
             columns = df.select_dtypes(include=['number']).columns.tolist()
 
         for col in columns:
-            if col not in df.columns or not pd.api.types.is_numeric_dtype(df[col]):
+            if not self._has_column(col) or not pd.api.types.is_numeric_dtype(df[col]):
                 continue
 
             outlier_mask = pd.Series(False, index=df.index)
@@ -461,10 +527,11 @@ class ValidationEngine:
             mandatory = empty_config.get("mandatory", True)
 
         if "*" in columns:
+            # Future: this type-based filter may be delegated to other execution engines
             columns = df.select_dtypes(include=['object']).columns.tolist()
 
         for col in columns:
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
 
             invalid_mask = df[col].isna() | (df[col].astype(str).str.strip() == "")
@@ -505,7 +572,7 @@ class ValidationEngine:
         }
 
         for col, expected_type in schema_config.items():
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
 
             checker = type_checkers.get(expected_type)
@@ -527,7 +594,7 @@ class ValidationEngine:
             fmt = rule.get("format", "%Y-%m-%d")
             mandatory = rule.get("mandatory", True)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
 
             series = df[col].astype(str)
@@ -613,7 +680,7 @@ class ValidationEngine:
                     ref_df = DataSource.load_data(ref_config)
                     self._ref_cache[ref_key] = ref_df
 
-                if col not in df.columns:
+                if not self._has_column(col):
                     raise KeyError(f"Source column '{col}' not found in dataset")
                 if ref_col not in ref_df.columns:
                     raise KeyError(f"Reference column '{ref_col}' not found in source '{ref_key}'")
@@ -658,7 +725,7 @@ class ValidationEngine:
             max_mag = rule.get("max_magnitude")
             mandatory = rule.get("mandatory", True)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
 
             invalid_rows = pd.Series(False, index=df.index)
@@ -685,7 +752,7 @@ class ValidationEngine:
             t_type = rule.get("format_type", "iso_timezone")
             mandatory = rule.get("mandatory", True)
 
-            if col not in df.columns:
+            if not self._has_column(col):
                 continue
 
             invalid_count = 0
@@ -725,6 +792,7 @@ class ValidationEngine:
         # Reset state for safe re-runs
         self._collector = ResultCollector()
         self._working_df = self._original_df.copy()
+        self.engine = PandasExecutionEngine(self._working_df)
 
         # Immutable contract
         local_contract = copy.deepcopy(contract)

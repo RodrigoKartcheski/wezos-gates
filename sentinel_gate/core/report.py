@@ -386,12 +386,25 @@ class ReportGenerator:
         """Generates a unified landing page with tabs for all reports."""
         logger.info(f"Generating Unified Dashboard: {output_file}")
         
-        # We use basenames for the iframes assuming they are in the same directory
-        schema_file = os.path.basename(schema_report)
-        validations_file = os.path.basename(validations_report)
-        profiling_file = os.path.basename(profiling_report)
-        discovery_file = os.path.basename(discovery_report)
-        drift_file = "report_drift.html" # Fixed name per drift module
+        dashboard_dir = os.path.dirname(os.path.abspath(output_file))
+        
+        def get_rel(target_path):
+            if not target_path:
+                return "#"
+            # Ensure we have absolute paths for comparison
+            abs_target = os.path.abspath(target_path)
+            # Calculate relative path from dashboard location to report location
+            rel = os.path.relpath(abs_target, dashboard_dir)
+            return rel.replace("\\", "/") # Use web-friendly slashes
+
+        schema_file = get_rel(schema_report)
+        validations_file = get_rel(validations_report)
+        profiling_file = get_rel(profiling_report)
+        discovery_file = get_rel(discovery_report)
+        
+        # Drift report is handled by its own module, usually in the same run folder
+        # We try to locate it relative to validations if possible, or assume it exists in the output dir
+        drift_file = os.path.join(os.path.dirname(validations_file), "report_drift.html").replace("\\", "/")
 
         html = f"""
 <!DOCTYPE html>

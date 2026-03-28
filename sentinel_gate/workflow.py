@@ -14,9 +14,16 @@ from sentinel_gate.core.drift_detection import detect_drift
 from sentinel_gate.core.report import ReportGenerator
 from sentinel_gate.utils.logger import logger
 
-def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = ".") -> Dict[str, Any]:
+def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "reports") -> Dict[str, Any]:
     """Orchestrates the entire Data Quality workflow with nested output folders."""
     try:
+        # 0. ENSURE BASE REPORTS DIR
+        # If output_dir is a relative path that doesn't start with 'reports', prepend it
+        if not os.path.isabs(output_dir) and not output_dir.startswith("reports") and output_dir != ".":
+             output_dir = os.path.join("reports", output_dir)
+             
+        os.makedirs(output_dir, exist_ok=True)
+
         # Create unique run subfolder
         timestamp = datetime.now().strftime("%Y-%m-%d_%Hh%M")
         run_output_dir = os.path.join(output_dir, f"run_{timestamp}")
