@@ -10,15 +10,13 @@ pip install pyinstaller
 # --hidden-import: Ensure dynamic imports are included
 pyinstaller \
 --onefile \
---name data-profiler \
+--name sentinel_gate \
 --hidden-import google.cloud.bigquery \
 --hidden-import ydata_profiling \
 --hidden-import mcp \
---hidden-import matplotlib.backends.backend_svg \
---hidden-import matplotlib.backends.backend_pdf \
---hidden-import matplotlib.backends.backend_agg \
+--hidden-import pydantic \
 --collect-all ydata_profiling \
---collect-all matplotlib \
-__main__.py
+--clean \
+sentinel_gate/__main__.py
 
 echo "Build complete. Executable can be found in the dist/ folder."

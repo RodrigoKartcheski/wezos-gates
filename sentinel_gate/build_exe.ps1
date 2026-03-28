@@ -13,7 +13,7 @@ Write-Host "Building executable with PyInstaller..." -ForegroundColor Cyan
 # --clean: Clean cache before build
 pyinstaller `
     --onefile `
-    --name data-profiler `
+    --name sentinel_gate `
     --hidden-import google.cloud.bigquery `
     --hidden-import ydata_profiling `
     --hidden-import mcp `
@@ -24,6 +24,6 @@ pyinstaller `
     --collect-all ydata_profiling `
     --collect-all matplotlib `
     --clean `
-    __main__.py
+    sentinel_gate/__main__.py
 
-Write-Host "Build complete! Check the dist/ folder for data-profiler.exe" -ForegroundColor Green
+Write-Host "Build complete! Check the dist/ folder for sentinel_gate.exe" -ForegroundColor Green
