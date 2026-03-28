@@ -8,6 +8,7 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo, se
 - **SentinelGate Branding**: Transição oficial de `data-profiler` para `SentinelGate`.
 - **Pydantic Contracts**: Implementação de validação de configuração rigorosa usando Pydantic V2 em `config/models.py`.
 - **Suporte Multi-Formato (YAML/JSON)**: O framework agora suporta contratos de dados em YAML, permitindo comentários e maior legibilidade.
+- **Data Chunking (Pandas)**: Implementação de processamento em pedaços para CSV e BigQuery, permitindo validar datasets gigantes sem estourar a RAM.
 - **Hierarquia Modular**: Nova estrutura de pacotes (`core`, `engines`, `contracts`, `discovery`, `execution`).
 - **Abstração de Engines**: Introdução da `BaseExecutionEngine` para desacoplar lógica de validação do motor de processamento (Pandas).
 - **Guia Multi-Engine**: Nova documentação técnica para suporte futuro a Spark e DuckDB.

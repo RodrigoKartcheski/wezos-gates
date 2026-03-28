@@ -6,7 +6,6 @@ Aqui estão os próximos passos recomendados para elevar o SentinelGate ao patam
 
 ## 1. Próximos Passos Imediatos (Hands-on)
 - **1.1 - DuckDB Engine**: Implementar o `DuckDBExecutionEngine` para processar arquivos Parquet/CSV de 10GB+ sem estourar a memória (usando Zero-copy).
-- **1.2 - Data Chunking**: Adicionar suporte a processamento em pedaços (chunks) no `PandasExecutionEngine` para datasets maiores que a RAM disponível.
 
 ## 2. Expansão de Inteligência
 - **2.1 - Advanced Drift Analysis**: Integrar profundamente o `sentinel_gate/core/drift.py` com a biblioteca **EvidentlyAI** para detectar mudanças no comportamento estatístico das colunas ao longo do tempo.
