@@ -25,21 +25,6 @@ Para integrar com assistentes como o Claude/Cursor:
 python -m sentinel_gate --mcp
 ```
 
----
-
-## 🏗️ Arquitetura Modular (Staff-Tier)
-
-O `SentinelGate` é organizado em domínios isolados para máxima extensibilidade:
-
-- **`core/`**: Motor de validações, scoring de qualidade e geração de relatórios SQL-like.
-- **`engines/`**: Camada de execução desacoplada (atualmente suporta Pandas, preparado para Spark/DuckDB).
-- **`contracts/`**: Gestão de contratos de dados, inferência de tipos e detecção de Schema Drift.
-- **`discovery/`**: Ferramentas exploratórias para detecção de chaves primárias e análise de cardinalidade.
-- **`execution/`**: Orquestrador de workflow e abstração de fontes de dados (Datasource).
-
----
-
-## 🛠️ Estrutura do Arquivo de Configuração (JSON)
 
 O arquivo de configuração é dividido em seções principais.
 

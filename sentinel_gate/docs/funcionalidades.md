@@ -53,3 +53,8 @@ Facilidade de uso para humanos e IAs.
 
 - **CLI robusta**: Suporta configuração via JSON ou parâmetros de terminal.
 - **MCP Server**: Permite que agentes de IA (como Claude e ChatGPT) "enxerguem" e analisem seus dados diretamente.
+
+---
+
+## 🚀 Próximos Passos (Multi-Engine)
+O SentinelGate está preparado para crescer além do Pandas. Confira nosso **[Guia de Multi-Engine](multi_engine.md)** para entender como implementar suporte a Spark, DuckDB e outros motores de Big Data.
