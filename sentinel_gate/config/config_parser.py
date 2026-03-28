@@ -1,19 +1,20 @@
 from typing import Dict, Any, Optional
 from sentinel_gate.utils.json_loader import load_json
 from sentinel_gate.utils.logger import logger
+from sentinel_gate.config.models import SentinelConfig
+from pydantic import ValidationError
 
 class ConfigParser:
-    """Parses the validation configuration JSON."""
+    """Parses and validates the SentinelGate configuration using Pydantic."""
 
     @staticmethod
     def parse(config_path: str) -> Dict[str, Any]:
-        """Loads and validates the configuration JSON with simplified mapping."""
+        """Loads, auto-maps legacy keys, and validates the configuration."""
         logger.info(f"Parsing configuration from {config_path}")
         config = load_json(config_path)
         
-        # Keys that should go into 'source'
+        # 1. Legacy Auto-Mapping (Root keys to Sections)
         source_keys = ["file", "project", "dataset", "table", "sep", "encoding"]
-        # Sections to auto-map from root keys
         mapping_rules = {
             "discovery": ["group_by", "dedupIncludeColumns", "dedupExcludeColumns", 
                           "date_analysis", "check_nulls", "check_outliers", 
@@ -27,9 +28,8 @@ class ConfigParser:
                             "timestamp_checks"]
         }
 
-        # 1. Handle Simplified Source
+        # Handle Simplified Source
         if any(k in config for k in source_keys) and "source" not in config:
-            logger.info("Auto-mapping root keys to 'source'")
             source_conf = {}
             if "file" in config:
                 source_conf["type"] = "csv"
@@ -41,25 +41,33 @@ class ConfigParser:
                     source_conf[k] = config.pop(k)
             config["source"] = source_conf
 
-        # Special case: 'filter' at root - maps to DISCOVERY only to keep others clean
+        # Map root filter to discovery
         if "filter" in config:
             disco = config.setdefault("discovery", {})
             if "filter" not in disco:
                 disco["filter"] = config.pop("filter")
 
-        # 3. Handle Section Mappings (Discovery, Profiling, etc.)
+        # Map other sections
         for section, keys in mapping_rules.items():
             if any(k in config for k in keys):
-                logger.info(f"Auto-mapping keys to '{section}' section")
                 sec_conf = config.setdefault(section, {})
                 for k in keys:
                     if k in config and k not in sec_conf:
                         sec_conf[k] = config.pop(k)
 
-        # Basic validation of config structure
-        if "source" not in config:
-            # If we STILL don't have a source, it's invalid unless CLI provides it
-            # But the parser should ideally return what it has and let CLI handle merging
-            pass
-
-        return config
+        # 2. Pydantic Validation
+        try:
+            validated_config = SentinelConfig.model_validate(config)
+            # Return as dict for compatibility with the rest of the engine
+            return validated_config.model_dump(exclude_unset=True, by_alias=True)
+        except ValidationError as e:
+            logger.error(f"Configuration validation failed for {config_path}")
+            # Format Pydantic error into something readable
+            error_msgs = []
+            for err in e.errors():
+                loc = " -> ".join([str(x) for x in err['loc']])
+                msg = err['msg']
+                error_msgs.append(f"[{loc}]: {msg}")
+            
+            error_details = "\n".join(error_msgs)
+            raise ValueError(f"Invalid SentinelGate Configuration:\n{error_details}") from e
