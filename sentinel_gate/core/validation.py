@@ -65,6 +65,9 @@ class ResultCollector:
         return [r.to_dict() for r in self._results]
 
     def summary(self) -> Dict[str, Any]:
+        # Recalculate percentages before generating summary
+        self.finalize()
+        
         total = len(self._results)
         counts = {"PASS": 0, "FAIL": 0, "WARN": 0, "SKIP": 0}
         total_weight = 0.0
@@ -85,6 +88,80 @@ class ResultCollector:
             "skip": counts["SKIP"],
             "score": round((pass_weight / total_weight) * 100, 2) if total_weight > 0 else 0.0
         }
+
+    def finalize(self):
+        """Recalculates percentages and final statuses after all chunks are merged."""
+        for r in self._results:
+            if not r.metrics:
+                continue
+                
+            row_count = r.metrics.get("row_count", 0)
+            if row_count == 0:
+                continue
+                
+            # Recalculate based on specific rule types
+            if r.type == "null_check":
+                null_count = r.metrics.get("null_count", 0)
+                pct = (null_count / row_count) * 100
+                r.metrics["null_percent"] = f"{pct:.2f}%"
+                # Update status based on threshold stored in metrics
+                threshold_str = r.metrics.get("threshold", "0%")
+                try:
+                    threshold = float(threshold_str.replace("%", ""))
+                    if pct > threshold:
+                        r.status = "FAIL" if r.mandatory else "WARN"
+                        r.severity = "HIGH" if r.mandatory else "MEDIUM"
+                    else:
+                        r.status = "PASS"
+                        r.severity = "LOW"
+                except: pass
+            
+            elif r.type in ["domain_check", "numeric_check", "date_check", "comparison_check"]:
+                invalid_count = r.metrics.get("invalid_count", 0)
+                if invalid_count > 0:
+                    r.status = "FAIL" if r.mandatory else "WARN"
+                    r.severity = "HIGH" if r.mandatory else "MEDIUM"
+                else:
+                    r.status = "PASS"
+                    r.severity = "LOW"
+
+    def merge_partial_results(self, partial_results: List[Dict[str, Any]]):
+        """Merges results from a chunk into the global results list.
+        
+        If a rule_id already exists, it aggregates numeric metrics (counts).
+        If status transitions from PASS to FAIL/WARN, it updates the status.
+        """
+        for nr in partial_results:
+            existing = next((r for r in self._results if r.rule_id == nr["rule_id"]), None)
+            if not existing:
+                # First time seeing this rule, convert dict back to ValidationResult and add
+                res = ValidationResult(
+                    rule_id=nr["rule_id"], type=nr["type"], status=nr["status"],
+                    severity=nr["severity"], mandatory=nr["mandatory"],
+                    execution_id=nr["execution_id"], column=nr.get("column"),
+                    columns=nr.get("columns"), metrics=copy.deepcopy(nr.get("metrics")),
+                    message=nr.get("message")
+                )
+                self._results.append(res)
+            else:
+                # Merge metrics (counts, sums)
+                if existing.metrics and nr.get("metrics"):
+                    for k, v in nr["metrics"].items():
+                        if isinstance(v, (int, float)) and k in existing.metrics:
+                            existing.metrics[k] += v
+                        elif k.endswith("_count") and isinstance(v, int):
+                            # Ensure we sum up anything ending in _count
+                            existing.metrics[k] = existing.metrics.get(k, 0) + v
+                
+                # Update status (FAIL > WARN > PASS)
+                status_priority = {"FAIL": 3, "WARN": 2, "PASS": 1, "SKIP": 0}
+                if status_priority.get(nr["status"], 0) > status_priority.get(existing.status, 0):
+                    existing.status = nr["status"]
+                    existing.severity = nr["severity"]
+                
+                # Update message if needed
+                if nr.get("message") and nr["message"] not in (existing.message or ""):
+                    existing.message = f"{existing.message} | {nr['message']}" if existing.message else nr["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +334,7 @@ class ValidationEngine:
                     "null_count": null_count,
                     "null_percent": f"{null_percent:.2f}%",
                     "threshold": f"{effective_threshold}%",
+                    "row_count": row_count
                 },
             )
 
@@ -294,7 +372,11 @@ class ValidationEngine:
             passed=duplicate_count == 0,
             mandatory=mandatory,
             columns=primary_keys,
-            metrics={"duplicate_count": duplicate_count, "duplicate_percent": dup_pct},
+            metrics={
+                "duplicate_count": duplicate_count, 
+                "duplicate_percent": dup_pct,
+                "row_count": row_count
+            },
         )
 
     def validate_domain(self, domain_checks: List[Dict[str, Any]]):
@@ -342,6 +424,7 @@ class ValidationEngine:
                     "invalid_count": invalid_count,
                     "regex_used": regex,
                     "forbidden_values": list(forbidden) if forbidden else None,
+                    "row_count": self.engine.get_row_count()
                 },
             )
 
@@ -382,7 +465,7 @@ class ValidationEngine:
                 mandatory=mandatory,
                 rule_id=rule.get("id", f"{col}_numeric_check"),
                 column=col,
-                metrics={"invalid_count": invalid_count},
+                metrics={"invalid_count": invalid_count, "row_count": self.engine.get_row_count()},
             )
 
     def validate_volume(self, volume_config: Dict[str, Any]):

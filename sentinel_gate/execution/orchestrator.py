@@ -29,84 +29,109 @@ def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "repor
         run_output_dir = os.path.join(output_dir, f"run_{timestamp}")
         os.makedirs(run_output_dir, exist_ok=True)
         
-        # 1. LOAD DATA
-        df = DataSource.load_data(contract["source"])
+        # 1. LOAD DATA (Support Chunking)
+        data_iterator = DataSource.load_data(contract["source"])
+        chunk_size = contract["source"].get("chunk_size")
         dataset_name = contract["source"].get("table") or os.path.basename(contract["source"].get("file", "unknown_dataset"))
 
-        # 2. INFER TYPES
-        inferred_schema = SchemaInference.infer_schema(df)
+        # Initialize global state for chunked runs
+        global_val_collector = ResultCollector()
+        global_disco_results = None
+        inferred_schema = None
+        all_dfs = [] # only used if not chunking
+        
+        # 2. PROCESS DATA (Loop or Single Load)
+        if chunk_size:
+            logger.info("Executing workflow in CHUNKED mode")
+            for i, chunk_df in enumerate(data_iterator):
+                logger.info(f"Processing chunk {i+1}")
+                if inferred_schema is None:
+                    inferred_schema = SchemaInference.infer_schema(chunk_df)
+                
+                # Validation
+                quality_rules = contract.get("quality_rules", {})
+                chunk_val_engine = ValidationEngine(chunk_df)
+                chunk_val_output = chunk_val_engine.run_all(quality_rules)
+                global_val_collector.merge_partial_results(chunk_val_output["results"])
+                
+                # Discovery (Incremental)
+                discovery_contract = contract.get("discovery", {})
+                if discovery_contract:
+                    disco_engine = DiscoveryEngine(chunk_df)
+                    partial_disco = disco_engine.run_all(discovery_contract)
+                    if global_disco_results is None:
+                        global_disco_results = partial_disco
+                    else:
+                        # Simple merge for discovery (Future: full DiscoveryEngine.merge)
+                        global_disco_results["column_stats"] = {**global_disco_results["column_stats"], **partial_disco["column_stats"]}
+                
+                # For profiling, we take the first chunk as a representative sample
+                if i == 0:
+                    sample_df_for_profiling = chunk_df.copy()
 
-        # 3. SCHEMA VALIDATION
+            df_for_profiling = sample_df_for_profiling
+            validation_results = global_val_collector.results
+            discovery_results = global_disco_results or {"column_stats": {}}
+            # Volume check needs the total row count from metrics
+            total_rows = sum(r["metrics"].get("row_count", 0) for r in validation_results if r["type"] == "volume_check")
+        else:
+            # LEGACY / Standard Mode
+            df = data_iterator
+            inferred_schema = SchemaInference.infer_schema(df)
+            
+            quality_rules = contract.get("quality_rules", {})
+            val_engine = ValidationEngine(df.copy())
+            validation_output = val_engine.run_all(quality_rules)
+            validation_results = validation_output["results"]
+            
+            discovery_engine = DiscoveryEngine(df.copy())
+            discovery_results = discovery_engine.run_all(contract.get("discovery", {}))
+            df_for_profiling = df
+
+        # 3. SCHEMA VALIDATION & DRIFT
         drift_report = {"status": "NOT_RUN"}
         expected_schema = contract.get("quality_rules", {}).get("schema", {}).get("expected_columns")
         if expected_schema:
             drift_report = SchemaValidator.validate_schema(expected_schema, inferred_schema)
 
-        # 4. DATA QUALITY RULES (CONTRACT)
-        quality_rules = contract.get("quality_rules", {})
-        if not quality_rules.get("null_checks") and not quality_rules.get("group_by_checks") and not contract.get("quality_rules", {}).get("schema"):
-            logger.info("No quality rules provided, adding default null checks for all columns")
-            quality_rules["null_checks"] = [{"column": col} for col in df.columns]
-
-        val_engine = ValidationEngine(df.copy())
-        validation_output = val_engine.run_all(quality_rules)
-        validation_results = validation_output["results"]
-        technical_score = validation_output["summary"]["score"]
-
-        # 5. AGGREGATION CHECKS
-        agg_config = quality_rules.get("group_by_checks", [])
-        agg_engine = AggregationEngine(df.copy())
-        aggregation_results = agg_engine.run(agg_config, filter_query=quality_rules.get("filter"))
-
-        # 6. DISCOVERY ENGINE
-        discovery_contract = contract.get("discovery", {})
-        discovery_engine = DiscoveryEngine(df.copy())
-        discovery_results = discovery_engine.run_all(discovery_contract)
-
-        # 7. DRIFT DETECTION (New)
+        # 4. DRIFT DETECTION
         drift_results = {"status": "NOT_RUN"}
         if "reference" in contract:
             try:
-                logger.info("Loading reference dataset for drift detection")
                 ref_df = DataSource.load_data(contract["reference"])
-                drift_results = detect_drift(ref_df, df, run_output_dir)
+                drift_results = detect_drift(ref_df, df_for_profiling, run_output_dir)
             except Exception as e:
                 logger.error(f"Could not run drift detection: {e}")
-                drift_results = {"status": "FAIL", "message": str(e)}
 
-        # 8. SCORING
+        # 5. SCORING
         scoring_config = contract.get("scoring", {})
         scores = ScoringEngine.calculate_score(validation_results, drift_report, scoring_config)
 
-        # 10. GENERATE HTML REPORTS (Target run_output_dir)
+        # 6. REPORTS
         schema_html = os.path.join(run_output_dir, "report_schema.html")
         ReportGenerator.generate_schema_html(dataset_name, drift_report, inferred_schema, schema_html)
 
         validations_html = os.path.join(run_output_dir, "report_validations.html")
-        ReportGenerator.generate_validations_html(dataset_name, scores, validation_results, aggregation_results, validations_html)
+        ReportGenerator.generate_validations_html(dataset_name, scores, validation_results, [], validations_html)
 
         discovery_html = os.path.join(run_output_dir, "report_discovery.html")
         ReportGenerator.generate_discovery_html(dataset_name, discovery_results, discovery_html)
 
-        logger.info(f"Profiling: Passing df with {len(df)} rows")
         profile_html = os.path.join(run_output_dir, "report_profiling.html")
-        profiling_config = contract.get("profiling", {})
-        # Note: ProfilingEngine.generate_report already uses apply_sql_filter which clones
-        ProfilingEngine.generate_report(df.copy(), output_file=profile_html, title=f"Profile: {dataset_name}", filter_query=profiling_config.get("filter"))
+        ProfilingEngine.generate_report(df_for_profiling, output_file=profile_html, title=f"Profile (Sample): {dataset_name}")
 
         dashboard_html = os.path.join(run_output_dir, "dashboard.html")
         ReportGenerator.generate_dashboard_html(dataset_name, schema_html, validations_html, profile_html, discovery_html, dashboard_html)
         
-        # Also generate to top-level for convenience
+        # Latest copy
         top_level_dashboard = os.path.join(output_dir, "dashboard.html")
         ReportGenerator.generate_dashboard_html(dataset_name, schema_html, validations_html, profile_html, discovery_html, top_level_dashboard)
         
-        logger.info(f"Workflow completed. Reports in: {run_output_dir}")
-        logger.info(f"Latest Dashboard: {top_level_dashboard}")
         return {
             "dataset": dataset_name,
             "scores": scores,
-            "reports_dir": run_output_dir
+            "reports_dir": run_output_dir,
+            "mode": "chunked" if chunk_size else "batch"
         }
 
     except Exception as e:

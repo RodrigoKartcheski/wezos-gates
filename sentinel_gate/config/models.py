@@ -9,6 +9,7 @@ class SourceConfig(BaseModel):
     table: Optional[str] = None
     sep: str = ","
     encoding: str = "utf-8"
+    chunk_size: Optional[int] = None
 
     @model_validator(mode="after")
     def validate_source_dependencies(self):
