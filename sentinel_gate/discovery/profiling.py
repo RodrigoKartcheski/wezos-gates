@@ -1,5 +1,5 @@
 import pandas as pd
-from ydata_profiling import ProfileReport
+# Removed early-binding heavy import
 from sentinel_gate.utils.logger import logger
 from sentinel_gate.utils.sql_utils import apply_sql_filter
 
@@ -14,6 +14,7 @@ class ProfilingEngine:
                 df = apply_sql_filter(df, filter_query)
                 
             logger.info(f"Generating profiling report: {output_file}")
+            from ydata_profiling import ProfileReport
             profile = ProfileReport(df, title=title, explorative=True)
             profile.to_file(output_file)
             return output_file

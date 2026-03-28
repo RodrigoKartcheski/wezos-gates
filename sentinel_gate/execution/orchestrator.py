@@ -1,24 +1,27 @@
 import os
+import concurrent.futures
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
-from sentinel_gate.execution.datasource import DataSource
-from sentinel_gate.contracts.inference import SchemaInference
-from sentinel_gate.contracts.validator import SchemaValidator
-from sentinel_gate.core.validation import ValidationEngine
-from sentinel_gate.core.aggregation import AggregationEngine
-from sentinel_gate.core.scoring import ScoringEngine
-from sentinel_gate.discovery.profiling import ProfilingEngine
-from sentinel_gate.discovery.engine import DiscoveryEngine
-from sentinel_gate.core.drift import detect_drift
-from sentinel_gate.core.report import ReportGenerator
-from sentinel_gate.utils.logger import logger
+# (Removed early-binding imports to fix Windows hang)
+
+# (Removed early-binding worker import to fix Windows hang)
 
 def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "reports") -> Dict[str, Any]:
-    """Orchestrates the entire Data Quality workflow with nested output folders."""
+    """Orchestrates the entire Data Quality workflow (supports Parallel & Chunked modes)."""
+    from sentinel_gate.execution.workers import validate_chunk_task
+    from sentinel_gate.execution.datasource import DataSource
+    from sentinel_gate.contracts.inference import SchemaInference
+    from sentinel_gate.contracts.validator import SchemaValidator
+    from sentinel_gate.core.validation import ValidationEngine, ResultCollector
+    from sentinel_gate.core.scoring import ScoringEngine
+    from sentinel_gate.discovery.profiling import ProfilingEngine
+    from sentinel_gate.discovery.engine import DiscoveryEngine
+    from sentinel_gate.core.drift import detect_drift
+    from sentinel_gate.core.report import ReportGenerator
+    from sentinel_gate.utils.logger import logger
     try:
         # 0. ENSURE BASE REPORTS DIR
-        # If output_dir is a relative path that doesn't start with 'reports', prepend it
         if not os.path.isabs(output_dir) and not output_dir.startswith("reports") and output_dir != ".":
              output_dir = os.path.join("reports", output_dir)
              
@@ -29,63 +32,98 @@ def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "repor
         run_output_dir = os.path.join(output_dir, f"run_{timestamp}")
         os.makedirs(run_output_dir, exist_ok=True)
         
-        # 1. LOAD DATA (Support Chunking)
-        data_iterator = DataSource.load_data(contract["source"])
-        chunk_size = contract["source"].get("chunk_size")
-        dataset_name = contract["source"].get("table") or os.path.basename(contract["source"].get("file", "unknown_dataset"))
+        # 1. LOAD DATA CONFIG
+        source_config = contract["source"]
+        data_iterator = DataSource.load_data(source_config)
+        chunk_size = source_config.get("chunk_size")
+        parallel_workers = source_config.get("parallel_workers", 1)
+        dataset_name = source_config.get("table") or os.path.basename(source_config.get("file", "unknown_dataset"))
 
-        # Initialize global state for chunked runs
+        # Initialize global state
         global_val_collector = ResultCollector()
         global_disco_results = None
         inferred_schema = None
-        all_dfs = [] # only used if not chunking
+        df_for_profiling = None
         
-        # 2. PROCESS DATA (Loop or Single Load)
-        if chunk_size:
-            logger.info("Executing workflow in CHUNKED mode")
+        quality_rules = contract.get("quality_rules", {})
+        discovery_contract = contract.get("discovery")
+
+        # 2. PROCESS DATA (PARALLEL vs SEQUENTIAL)
+        if chunk_size and parallel_workers > 1:
+            logger.info(f"Executing workflow in PARALLEL mode with {parallel_workers} workers")
+            # Using ProcessPoolExecutor with late-binding imports
+            with concurrent.futures.ProcessPoolExecutor(max_workers=parallel_workers) as executor:
+                futures = {}
+                for i, chunk_df in enumerate(data_iterator):
+                    if inferred_schema is None:
+                        inferred_schema = SchemaInference.infer_schema(chunk_df)
+                        df_for_profiling = chunk_df.copy() # First chunk as sample
+                    
+                    # Submit to pool
+                    fut = executor.submit(validate_chunk_task, chunk_df, quality_rules, discovery_contract)
+                    futures[fut] = i
+                
+                # Collect results
+                for future in concurrent.futures.as_completed(futures):
+                    chunk_id = futures[future]
+                    try:
+                        worker_res = future.result()
+                        global_val_collector.merge_partial_results(worker_res["val_results"])
+                        
+                        if worker_res["disco_results"]:
+                            if global_disco_results is None:
+                                global_disco_results = worker_res["disco_results"]
+                            else:
+                                for key, val in worker_res["disco_results"].items():
+                                    if key not in global_disco_results:
+                                        global_disco_results[key] = val
+                                    elif isinstance(val, dict):
+                                        global_disco_results[key].update(val)
+                                    elif isinstance(val, list):
+                                        global_disco_results[key].extend(val)
+                    except Exception as e:
+                        logger.error(f"Worker failed for chunk {chunk_id}: {e}")
+                        raise
+            
+            validation_results = global_val_collector.results
+            discovery_results = global_disco_results or {"column_stats": {}}
+            
+        elif chunk_size:
+            # SEQUENTIAL CHUNKING
+            logger.info("Executing workflow in SEQUENTIAL CHUNKED mode")
             for i, chunk_df in enumerate(data_iterator):
-                logger.info(f"Processing chunk {i+1}")
                 if inferred_schema is None:
                     inferred_schema = SchemaInference.infer_schema(chunk_df)
+                    df_for_profiling = chunk_df.copy()
                 
-                # Validation
-                quality_rules = contract.get("quality_rules", {})
                 chunk_val_engine = ValidationEngine(chunk_df)
                 chunk_val_output = chunk_val_engine.run_all(quality_rules)
                 global_val_collector.merge_partial_results(chunk_val_output["results"])
                 
-                # Discovery (Incremental)
-                discovery_contract = contract.get("discovery", {})
                 if discovery_contract:
                     disco_engine = DiscoveryEngine(chunk_df)
                     partial_disco = disco_engine.run_all(discovery_contract)
                     if global_disco_results is None:
                         global_disco_results = partial_disco
                     else:
-                        # Simple merge for discovery (Future: full DiscoveryEngine.merge)
-                        global_disco_results["column_stats"] = {**global_disco_results["column_stats"], **partial_disco["column_stats"]}
-                
-                # For profiling, we take the first chunk as a representative sample
-                if i == 0:
-                    sample_df_for_profiling = chunk_df.copy()
+                        for key, val in partial_disco.items():
+                            if key not in global_disco_results:
+                                global_disco_results[key] = val
+                            elif isinstance(val, dict):
+                                global_disco_results[key].update(val)
+                            elif isinstance(val, list):
+                                global_disco_results[key].extend(val)
 
-            df_for_profiling = sample_df_for_profiling
             validation_results = global_val_collector.results
             discovery_results = global_disco_results or {"column_stats": {}}
-            # Volume check needs the total row count from metrics
-            total_rows = sum(r["metrics"].get("row_count", 0) for r in validation_results if r["type"] == "volume_check")
         else:
-            # LEGACY / Standard Mode
+            # SINGLE DF MODE
             df = data_iterator
             inferred_schema = SchemaInference.infer_schema(df)
-            
-            quality_rules = contract.get("quality_rules", {})
             val_engine = ValidationEngine(df.copy())
             validation_output = val_engine.run_all(quality_rules)
             validation_results = validation_output["results"]
-            
-            discovery_engine = DiscoveryEngine(df.copy())
-            discovery_results = discovery_engine.run_all(contract.get("discovery", {}))
+            discovery_results = DiscoveryEngine(df.copy()).run_all(discovery_contract) if discovery_contract else {"column_stats": {}}
             df_for_profiling = df
 
         # 3. SCHEMA VALIDATION & DRIFT
@@ -137,4 +175,3 @@ def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "repor
     except Exception as e:
         logger.error(f"Workflow failed: {e}", exc_info=True)
         raise
-

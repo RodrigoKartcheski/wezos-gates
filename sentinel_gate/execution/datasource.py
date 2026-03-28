@@ -51,7 +51,9 @@ class DataSource:
         chunk_size = source_config.get("chunk_size")
         
         if source_type == "csv":
-            csv_kwargs = {k: v for k, v in source_config.items() if k not in ["type", "file", "chunk_size"]}
+            # Exclude framework-specific keys before passing to pandas
+            internal_keys = ["type", "file", "chunk_size", "parallel_workers"]
+            csv_kwargs = {k: v for k, v in source_config.items() if k not in internal_keys}
             if chunk_size:
                 csv_kwargs["chunksize"] = chunk_size
                 logger.info(f"Loading CSV in chunks of {chunk_size}")
