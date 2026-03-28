@@ -1,9 +1,9 @@
 import pandas as pd
 import os
-from data_profiler.core.discovery_engine import DiscoveryEngine
+from sentinel_gate.core.discovery_engine import DiscoveryEngine
 
 # Load the same file the user is using
-csv_path = r"C:\Temp\executavel\data_profiler\tests\sample_data\sample_data.csv"
+csv_path = r"C:\Temp\executavel\sentinel_gate\tests\sample_data\sample_data.csv"
 df = pd.read_csv(csv_path)
 
 print(f"Dataset Rows: {len(df)}")

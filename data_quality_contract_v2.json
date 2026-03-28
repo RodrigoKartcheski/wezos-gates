@@ -1,0 +1,41 @@
+{
+  "file": "sample_data_v2.csv",
+  "sep": ";",
+  "quality_rules": {
+    "primary_key": [
+      "id",
+      "loja"
+    ],
+    "null_checks": [
+      {
+        "column": "id",
+        "max_percent": 0
+      },
+      {
+        "column": "loja",
+        "max_percent": 0
+      },
+      {
+        "column": "nome",
+        "max_percent": 0
+      },
+      {
+        "column": "email",
+        "max_percent": 0.2
+      },
+      {
+        "column": "idade",
+        "max_percent": 0.1
+      }
+    ],
+    "duplicate_check": true,
+    "schema": {
+      "id": "int",
+      "loja": "string",
+      "nome": "string",
+      "email": "string",
+      "idade": "int",
+      "data_cadastro": "date"
+    }
+  }
+}

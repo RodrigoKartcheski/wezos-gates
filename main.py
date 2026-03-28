@@ -1,4 +1,4 @@
-from data_profiler.interfaces.cli import run_cli
+from sentinel_gate.interfaces.cli import run_cli
 
 if __name__ == "__main__":
     run_cli()
