@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 from sentinel_gate.config.config_parser import ConfigParser
-from sentinel_gate.workflow import run_data_quality_workflow
+from sentinel_gate.execution.orchestrator import run_data_quality_workflow
 from sentinel_gate.utils.logger import logger
 
 def run_cli():

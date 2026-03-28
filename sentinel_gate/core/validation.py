@@ -20,6 +20,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, List, Optional, Tuple, Callable
 from sentinel_gate.utils.logger import logger
 from sentinel_gate.utils.sql_utils import apply_sql_filter
+from sentinel_gate.engines.pandas_engine import PandasExecutionEngine
 
 
 # ---------------------------------------------------------------------------
@@ -114,58 +115,8 @@ def _validate_expression(equation: str):
 
 
 # ---------------------------------------------------------------------------
-# 4. Execution Engine Abstraction (Minimal)
+# 4. Validation Engine (Orchestrates Rules against Execution Engine)
 # ---------------------------------------------------------------------------
-# NOTE:
-# This is a minimal abstraction layer to prepare for future multi-engine support.
-# Complex operations (eval, groupby, regex, lookup) intentionally remain in Pandas.
-# Future: implement SparkExecutionEngine, DuckDBExecutionEngine, etc.
-
-class BaseExecutionEngine:
-    """Minimal interface for data execution primitives.
-
-    Concrete engines must implement these methods to support
-    different data backends (Pandas, Spark, DuckDB, Polars, etc.).
-    """
-
-    def get_row_count(self) -> int:
-        """Returns the number of rows in the active dataset."""
-        raise NotImplementedError
-
-    def get_columns(self) -> List[str]:
-        """Returns the list of column names in the active dataset."""
-        raise NotImplementedError
-
-    def has_column(self, column: str) -> bool:
-        """Checks if a column exists in the active dataset."""
-        return column in self.get_columns()
-
-    def get_dataframe(self):
-        """Returns the underlying data object for engine-specific operations.
-
-        Future: this method may be delegated to other execution engines (Spark, DuckDB).
-        """
-        raise NotImplementedError
-
-
-class PandasExecutionEngine(BaseExecutionEngine):
-    """Concrete execution engine backed by Pandas DataFrame."""
-
-    def __init__(self, df: pd.DataFrame):
-        self._df = df
-
-    def get_row_count(self) -> int:
-        return len(self._df)
-
-    def get_columns(self) -> List[str]:
-        return self._df.columns.tolist()
-
-    def get_dataframe(self) -> pd.DataFrame:
-        return self._df
-
-    def set_dataframe(self, df: pd.DataFrame):
-        """Replaces the internal working dataframe (used by filters)."""
-        self._df = df
 
 
 # ---------------------------------------------------------------------------
@@ -193,8 +144,11 @@ class ValidationEngine:
         self._ref_cache: Dict[str, pd.DataFrame] = {}
         self._regex_cache: Dict[str, re.Pattern] = {}
 
-    # ------------------------------------------------------------------
-    # Helpers
+    @property
+    def results(self) -> List[Dict[str, Any]]:
+        """Backward-compatible results access (delegates to collector)."""
+        return self._collector.results
+
     # ------------------------------------------------------------------
     def _resolve_status(self, passed: bool, mandatory: bool) -> Tuple[str, str]:
         """Returns (status, severity) tuple."""
@@ -662,7 +616,7 @@ class ValidationEngine:
 
     def validate_lookup(self, lookup_checks: List[Dict[str, Any]]):
         """Validates if column values exist in an external reference dataset."""
-        from sentinel_gate.core.datasource import DataSource
+        from sentinel_gate.execution.datasource import DataSource
 
         df = self._working_df
         for rule in lookup_checks:

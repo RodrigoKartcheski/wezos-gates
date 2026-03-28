@@ -1,8 +1,8 @@
 import pandas as pd
 import unittest
-from sentinel_gate.core.schema_inference import SchemaInference
-from sentinel_gate.core.validation_engine import ValidationEngine
-from sentinel_gate.core.aggregation_engine import AggregationEngine
+from sentinel_gate.contracts.inference import SchemaInference
+from sentinel_gate.core.validation import ValidationEngine
+from sentinel_gate.core.aggregation import AggregationEngine
 
 class TestDataQualityCore(unittest.TestCase):
 
@@ -30,7 +30,7 @@ class TestDataQualityCore(unittest.TestCase):
         self.assertEqual(engine.results[0]['status'], 'PASS')
         
         # Test max 0% nulls on 'valor' (should fail)
-        engine.results = []
+        engine = ValidationEngine(self.df) # Fresh instance instead of resetting property
         engine.validate_nulls([{"column": "valor", "max_percent": 0}])
         self.assertEqual(engine.results[0]['status'], 'FAIL')
 
@@ -50,7 +50,7 @@ class TestDataQualityCore(unittest.TestCase):
         engine.validate_numeric([{"column": "id", "min": 1, "max": 10}])
         self.assertEqual(engine.results[0]['status'], 'PASS')
         
-        engine.results = []
+        engine = ValidationEngine(self.df)
         engine.validate_numeric([{"column": "id", "min": 2}]) # 1 is less than 2
         self.assertEqual(engine.results[0]['status'], 'FAIL')
 

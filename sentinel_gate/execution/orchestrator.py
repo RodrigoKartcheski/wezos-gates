@@ -2,15 +2,15 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from sentinel_gate.core.datasource import DataSource
-from sentinel_gate.core.schema_inference import SchemaInference
-from sentinel_gate.core.schema_validator import SchemaValidator
-from sentinel_gate.core.validation_engine import ValidationEngine
-from sentinel_gate.core.aggregation_engine import AggregationEngine
+from sentinel_gate.execution.datasource import DataSource
+from sentinel_gate.contracts.inference import SchemaInference
+from sentinel_gate.contracts.validator import SchemaValidator
+from sentinel_gate.core.validation import ValidationEngine
+from sentinel_gate.core.aggregation import AggregationEngine
 from sentinel_gate.core.scoring import ScoringEngine
-from sentinel_gate.core.profiling import ProfilingEngine
-from sentinel_gate.core.discovery_engine import DiscoveryEngine
-from sentinel_gate.core.drift_detection import detect_drift
+from sentinel_gate.discovery.profiling import ProfilingEngine
+from sentinel_gate.discovery.engine import DiscoveryEngine
+from sentinel_gate.core.drift import detect_drift
 from sentinel_gate.core.report import ReportGenerator
 from sentinel_gate.utils.logger import logger
 

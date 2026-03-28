@@ -1,7 +1,7 @@
 from mcp.server.fastmcp import FastMCP
-from sentinel_gate.workflow import run_data_quality_workflow
-from sentinel_gate.core.datasource import DataSource
-from sentinel_gate.core.schema_inference import SchemaInference
+from sentinel_gate.execution.orchestrator import run_data_quality_workflow
+from sentinel_gate.execution.datasource import DataSource
+from sentinel_gate.contracts.inference import SchemaInference
 from sentinel_gate.utils.logger import logger
 import json
 

@@ -12,20 +12,26 @@ Covers:
 - Weighted severity scoring
 - Zero mutation on contract object
 """
-import unittest
-import copy
 import pandas as pd
-import numpy as np
+import json
 import os
-from sentinel_gate.core.validation_engine import (
+import unittest
+import uuid
+import re
+import ast
+import copy
+import numpy as np
+
+from sentinel_gate.core.validation import (
     ValidationEngine,
     ResultCollector,
     ValidationResult,
-    BaseExecutionEngine,
-    PandasExecutionEngine,
     _validate_expression,
 )
-from sentinel_gate.core.discovery_engine import DiscoveryEngine
+from sentinel_gate.engines.base import BaseExecutionEngine
+from sentinel_gate.engines.pandas_engine import PandasExecutionEngine
+from sentinel_gate.discovery.engine import DiscoveryEngine
+from sentinel_gate.execution.orchestrator import run_data_quality_workflow
 
 
 class TestResultCollector(unittest.TestCase):
