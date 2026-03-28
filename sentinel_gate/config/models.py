@@ -97,3 +97,4 @@ class SentinelConfig(BaseModel):
     discovery: Optional[DiscoveryConfig] = None
     profiling: Optional[ProfilingConfig] = None
     reference: Optional[SourceConfig] = None
+    save_history: bool = False # Disabled by default as per user request

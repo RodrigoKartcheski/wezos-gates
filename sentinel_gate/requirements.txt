@@ -10,3 +10,4 @@ mcp
 pyinstaller
 pydantic
 evidently
+streamlit

@@ -3,6 +3,7 @@ import sys
 import os
 from sentinel_gate.config.config_parser import ConfigParser
 from sentinel_gate.execution.orchestrator import run_data_quality_workflow
+from sentinel_gate.utils.history_db import log_execution
 from sentinel_gate.utils.logger import logger
 
 def run_cli():
@@ -37,6 +38,10 @@ def run_cli():
     parser.add_argument("--check-dates", help="Comma separated list of columns to analyze dates (or * for all date types)")
     parser.add_argument("--check-constants", action="store_true", help="Identify columns with constant values")
     parser.add_argument("--check-empty", help="Comma separated list of columns to check for empty strings")
+    
+    # Global flags
+    parser.add_argument("--save-history", action="store_true", default=False, help="Enable SQLite execution logging")
+    parser.add_argument("--no-history", action="store_false", dest="save_history", help="Disable SQLite execution logging (Default)")
 
     args = parser.parse_args()
 
@@ -45,15 +50,15 @@ def run_cli():
         run_mcp_server()
         return
 
-    # Enforce --source as mandatory (unless in MCP mode)
-    if not args.source:
-        print("Error: --source [csv|bigquery] is mandatory.")
-        parser.print_help()
-        sys.exit(1)
-
     config = {}
     if args.config:
         config = ConfigParser.parse(args.config)
+    
+    # Enforce source (either from config or CLI)
+    if not args.source and "source" not in config:
+        print("Error: --source [csv|bigquery] or a valid --config file is mandatory.")
+        parser.print_help()
+        sys.exit(1)
     
     # Merge/Override with CLI flags if provided
     # Source type is now guaranteed to be present from args.source or manual check above
@@ -107,13 +112,21 @@ def run_cli():
     if args.check_empty:
         config.setdefault("validations", {})["empty_string_checks"] = args.check_empty.split(",")
 
+    # Save History flag
+    config["save_history"] = args.save_history
+
     if not config:
 
         parser.print_help()
         sys.exit(1)
 
     try:
-        run_data_quality_workflow(config, output_dir=args.output)
+        result = run_data_quality_workflow(config, output_dir=args.output)
+        
+        # LOG TO HISTORY (CLI parity)
+        if args.save_history:
+            log_execution(result, config)
+            
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

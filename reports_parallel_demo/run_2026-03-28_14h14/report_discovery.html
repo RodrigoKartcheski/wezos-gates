@@ -1,0 +1,57 @@
+
+        <html>
+        <head><title>SentinelGate | Discovery - parallel_demo.csv</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .status-pass { color: #27ae60; font-weight: bold; }
+        .status-fail { color: #e74c3c; font-weight: bold; }
+        .score-box { font-size: 2.5em; font-weight: bold; color: #3498db; text-align: center; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; color: #555; }
+        tr:hover { background-color: #f1f1f1; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; }
+        .badge-pass { background-color: #eafaf1; color: #27ae60; }
+        .badge-fail { background-color: #fdedec; color: #e74c3c; }
+        .badge-warn { background-color: #fef9e7; color: #f39c12; }
+    </style>
+    </head>
+        <body>
+            <div class='container'>
+                <h1>SentinelGate Insights: parallel_demo.csv</h1>
+                
+            <div class='card' style='display: flex; gap: 40px; justify-content: center; text-align: center;'>
+                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Rows</p><b style='font-size: 1.5em;'>40</b></div>
+                <div><p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Total Columns</p><b style='font-size: 1.5em;'>4</b></div>
+                <div>
+                    <p style='font-size: 0.9em; color: #7f8c8d; margin: 0;'>Dataset Size</p>
+                    <div style='display: flex; gap: 15px; justify-content: center; margin-top: 5px;'>
+                        <span style='font-size: 1.1em;'><b>4,952</b> <small>Bytes</small></span>
+                        <span style='font-size: 1.1em;'><b>0.0000</b> <small>GB</small></span>
+                        <span style='font-size: 1.1em;'><b>0.000000</b> <small>TB</small></span>
+                    </div>
+                </div>
+            </div>
+            
+                
+            <h2>Distinct Values Count (Sorted)</h2>
+            <table>
+                <tr><th>Column</th><th>Distinct Values</th></tr>
+                <tr><td><code>id</code></td><td>40</td></tr><tr><td><code>val</code></td><td>3</td></tr><tr><td><code>status</code></td><td>3</td></tr><tr><td><code>email</code></td><td>2</td></tr>
+            </table>
+            
+                <h2>Primary Key Detection</h2>
+                <div class='card'><h3 class='status-fail'>❌ No Primary Key Found</h3><p>Automatic detection could not find a unique combination.</p></div>
+                
+                
+                
+                
+                
+            </div>
+        </body>
+        </html>
+        

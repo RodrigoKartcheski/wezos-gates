@@ -1,105 +1,74 @@
-# Guia de Uso: SentinelGate (Data Quality Framework)
+# Guia de Uso: SentinelGate (Data Quality Platform) 🧬
 
-Este documento descreve as possibilidades de configuração e uso do framework `SentinelGate`. A ferramenta é projetada para validar a qualidade dos dados, detectar drift de schema e realizar descobertas exploratórias em arquivos CSV ou tabelas BigQuery, seguindo padrões de engenharia de software de nível corporativo.
+O **SentinelGate** é uma plataforma modular de Data Quality de nível corporativo. Ele permite validar a integridade de dados, detectar drifts e realizar descobertas exploratórias em CSV e BigQuery de forma performática (multicore).
 
 ---
 
-## 🚀 Como Iniciar
+## 🚦 Portas de Entrada (Trindade de Uso)
 
-A configuração principal é feita através de um arquivo JSON. Você pode executar o framework de três formas:
+Você pode interagir com o framework de três maneiras, dependendo da necessidade:
 
-### 1. Como Módulo Python (Recomendado)
+### 1. 🎨 SentinelGate Studio (Visual / Low-Code)
+Ideal para exploração, configuração visual e usuários não-técnicos.
 ```bash
-python -m sentinel_gate --config seu_config.json --output reports/
+streamlit run sentinel_gate/app.py
 ```
+- **Recursos**: Upload de CSV, botão "Sugestão Mágica" (Auto-Discovery), exportação de JSON e gráficos de tendência de score.
 
-### 2. Via Executável (Windows)
-Se você gerou o binário via PyInstaller:
+### 2. ⌨️ CLI (Automação / CI-CD)
+Ideal para rodar em Airflow, GitHub Actions ou scripts agendados.
 ```bash
-.\sentinel_gate.exe --config seu_config.json --output reports/
+python -m sentinel_gate --config contrato.json --output reports/
 ```
+- **Opções de Histórico**:
+  - `--save-history`: Ativa o registro no banco de dados SQLite.
+  - `--no-history`: Desativa o registro (Padrão para evitar poluição).
 
-### 3. Modo Interativo (IA / MCP)
-Para integrar com assistentes como o Claude/Cursor:
+### 3. 🤖 MCP Server (Agentes de IA)
+Permite que IAs (Claude/GPT) executem o framework de forma autônoma.
 ```bash
 python -m sentinel_gate --mcp
 ```
 
+---
 
-O arquivo de configuração é dividido em seções principais.
+## 🏛️ Observabilidade e Persistência
 
-### 1. Origem dos Dados (`source`)
-| Campo | Tipo | Descrição | Exemplo |
-| :--- | :--- | :--- | :--- |
-| `type` | string | `csv` ou `bigquery` | `"csv"` |
-| `file` | string | Caminho do arquivo (se for CSV) | `"samples/dados.csv"` |
-| `project` | string | ID do projeto no Google Cloud (BQ) | `"projeto-prod"` |
-| `dataset` | string | Nome do dataset no BigQuery | `"raw_layer"` |
-| `table` | string | Nome da tabela no BigQuery | `"vendas"` |
+O SentinelGate utiliza um banco de dados **SQLite** (`sentinel_gate/history.db`) para armazenar o histórico de execuções.
+
+- **Fase 1**: Monitoramento de tendência de score.
+- **Gráficos**: Visíveis via **SentinelGate Studio** na aba "Histórico".
+- **Default**: O histórico vem **DESATIVADO** por padrão para garantir privacidade em rodadas de teste. Use `--save-history` no CLI ou marque o checkbox no Studio para persistir.
 
 ---
 
-### 2. Validações de Qualidade (`validations`)
-Seção que define as regras de integridade. Use `"mandatory": false` para gerar apenas alertas (**WARN**) sem derrubar o score técnico global.
+## 🛠️ Configuração do Contrato (JSON/YAML)
 
+O contrato define a inteligência do pipeline. Abaixo as seções principais:
+
+### 1. Origem (`source`)
+| Campo | Descrição | Exemplo |
+| :--- | :--- | :--- |
+| `type` | `csv` ou `bigquery` | `"csv"` |
+| `file` | Caminho do arquivo | `"samples/vendas.csv"` |
+| `chunk_size` | Tamanho do pedaço para processamento em RAM baixa | `5000` |
+| `parallel_workers` | Número de CPUs para processamento paralelo | `4` |
+
+### 2. Validações (`validations`)
 ```json
 "validations": {
-  "primary_key": { "columns": ["id"], "mandatory": true },
-  "null_checks": [
-    { "column": "email", "max_percent": 0.1, "mandatory": false }
-  ],
-  "domain_checks": [
-    { "column": "status", "allowed_values": ["ATIVO", "INATIVO"] }
-  ],
-  "numeric_checks": [
-    { "column": "valor", "min": 0 }
-  ],
-  "comparison_checks": [
-    { "equation": "preco * qtd == total" }
-  ],
-  "lookup_checks": [
-    { "column": "customer_id", "reference_source": {"table": "customers"}, "reference_column": "id" }
-  ]
+  "null_checks": [{ "column": "id", "mandatory": true }],
+  "numeric_checks": [{ "column": "preco", "min": 0 }]
 }
 ```
 
 ---
 
-### 3. Descoberta e Auditoria (`discovery`)
-Insights analíticos realizados **apenas nos dados que passaram nas validações obrigatórias**.
+## 🧪 Verificação Técnica
 
-```json
-"discovery": {
-  "filter": "status = 'ATIVO'",          // Filtro SQL para descoberta
-  "detect_keys": true,                   // Sugestão automática de PKs
-  "group_by": ["categoria"],             // Frequência de valores
-  "dedupIncludeColumns": ["cpf"]         // Auditoria de duplicidade semântica
-}
-```
-
----
-
-## 📊 Relatórios Consolidados
-
-Os resultados são centralizados na pasta `/reports` em um dashboard único:
-
-1. **`dashboard.html`**: Painel central unificado.
-2. **`report_validations.html`**: Detalhamento técnico das regras de DQ.
-3. **`report_discovery.html`**: Insights analíticos e chaves candidatas.
-4. **`report_schema.html`**: Metadados e análise de Drift.
-5. **`report_profiling.html`**: Perfil estatístico profundo.
-
----
-
-## 🧪 Desenvolvimento e Testes
-
-Para rodar a suíte de testes corporativa:
+Para rodar os testes de engenharia e garantir que a instalação está correta:
 ```bash
 $env:PYTHONPATH="."; python -m unittest discover sentinel_gate/tests
 ```
 
-Se estiver usando um assistente de IA, você pode ativar o modo MCP para que a IA execute análises diretamente:
-
-```bash
-python -m sentinel_gate --mcp
-```
+O sistema agora é **Modular**, **Paralelo** e **Auditável**.
