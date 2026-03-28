@@ -1,17 +1,26 @@
 from typing import Dict, Any, Optional
+import os
 from sentinel_gate.utils.json_loader import load_json
+from sentinel_gate.utils.yaml_loader import load_yaml
 from sentinel_gate.utils.logger import logger
 from sentinel_gate.config.models import SentinelConfig
 from pydantic import ValidationError
 
 class ConfigParser:
-    """Parses and validates the SentinelGate configuration using Pydantic."""
+    """Parses and validates the SentinelGate configuration (JSON or YAML) using Pydantic."""
 
     @staticmethod
     def parse(config_path: str) -> Dict[str, Any]:
         """Loads, auto-maps legacy keys, and validates the configuration."""
         logger.info(f"Parsing configuration from {config_path}")
-        config = load_json(config_path)
+        
+        # 1. Load data based on file extension
+        ext = os.path.splitext(config_path)[1].lower()
+        if ext in [".yaml", ".yml"]:
+            config = load_yaml(config_path)
+        else:
+            # Default to JSON
+            config = load_json(config_path)
         
         # 1. Legacy Auto-Mapping (Root keys to Sections)
         source_keys = ["file", "project", "dataset", "table", "sep", "encoding"]

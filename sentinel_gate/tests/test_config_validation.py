@@ -29,6 +29,26 @@ class TestConfigValidation(unittest.TestCase):
         parsed = ConfigParser.parse(self.temp_config)
         self.assertEqual(parsed["source"]["type"], "csv")
 
+    def test_valid_yaml_config(self):
+        yaml_config = "temp_config.yaml"
+        content = """
+source:
+  type: csv
+  file: mock.csv
+validations:
+  duplicate_check: true
+"""
+        with open(yaml_config, "w") as f:
+            f.write(content)
+        
+        try:
+            parsed = ConfigParser.parse(yaml_config)
+            self.assertEqual(parsed["source"]["type"], "csv")
+            self.assertTrue(parsed["validations"]["duplicate_check"])
+        finally:
+            if os.path.exists(yaml_config):
+                os.remove(yaml_config)
+
     def test_invalid_source_type(self):
         config = {
             "source": {

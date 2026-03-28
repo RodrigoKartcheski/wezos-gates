@@ -1,0 +1,44 @@
+# SentinelGate Data Quality Contract (YAML Edition) 💎
+# This format allows comments and is easier to read for humans.
+
+source:
+  type: csv
+  file: samples/sample_data_v2.csv
+  sep: ","
+  encoding: utf-8
+
+validations:
+  # 1. Primary Key: Unique identifier for each record
+  primary_key: 
+    columns: ["id"]
+    mandatory: true
+
+  # 2. Null Checks: Essential columns that should not be empty
+  null_checks:
+    - column: email
+      max_percent: 0.1
+      mandatory: false # Just a warning if fails
+    - column: status
+      max_percent: 0.0
+      mandatory: true
+
+  # 3. Domain Checks: Restricted list of values
+  domain_checks:
+    - column: status
+      allowed_values: ["ATIVO", "INATIVO"]
+
+  # 4. Numeric Checks: Valid ranges for business values
+  numeric_checks:
+    - column: valor_venda
+      min: 0
+      allow_negative: false
+
+  # 5. Business Rules: Cross-column validation
+  comparison_checks:
+    - equation: "preco * qtd == total"
+      mandatory: true
+
+discovery:
+  filter: "status = 'ATIVO'"
+  detect_keys: true
+  group_by: ["categoria"]

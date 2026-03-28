@@ -1,6 +1,9 @@
 pandas
+pydantic
 ydata-profiling
 google-cloud-bigquery
+mcp
+PyYAML
 pyarrow
 duckdb
 mcp
