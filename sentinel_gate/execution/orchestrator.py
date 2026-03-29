@@ -45,7 +45,8 @@ def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "repor
         inferred_schema = None
         df_for_profiling = None
         
-        quality_rules = contract.get("quality_rules", {})
+        # Pydantic-aware mapping (SentinelConfig uses 'validations')
+        quality_rules = contract.get("validations", {})
         discovery_contract = contract.get("discovery")
 
         # 2. PROCESS DATA (PARALLEL vs SEQUENTIAL)
@@ -128,13 +129,14 @@ def run_data_quality_workflow(contract: Dict[str, Any], output_dir: str = "repor
 
         # 3. SCHEMA VALIDATION & DRIFT
         drift_report = {"status": "NOT_RUN"}
-        expected_schema = contract.get("quality_rules", {}).get("schema", {}).get("expected_columns")
+        # SentinelConfig maps 'schema' to 'schema_type_checks' and it is inside 'validations'
+        expected_schema = quality_rules.get("schema_type_checks")
         if expected_schema:
             drift_report = SchemaValidator.validate_schema(expected_schema, inferred_schema)
 
         # 4. DRIFT DETECTION
         drift_results = {"status": "NOT_RUN"}
-        if "reference" in contract:
+        if contract.get("reference"): # Use .get() to avoid errors if key exists but is None
             try:
                 ref_df = DataSource.load_data(contract["reference"])
                 drift_results = detect_drift(ref_df, df_for_profiling, run_output_dir)

@@ -62,6 +62,7 @@ class ResultCollector:
 
     @property
     def results(self) -> List[Dict[str, Any]]:
+        self.finalize()
         return [r.to_dict() for r in self._results]
 
     def summary(self) -> Dict[str, Any]:
@@ -147,10 +148,7 @@ class ResultCollector:
                 # Merge metrics (counts, sums)
                 if existing.metrics and nr.get("metrics"):
                     for k, v in nr["metrics"].items():
-                        if isinstance(v, (int, float)) and k in existing.metrics:
-                            existing.metrics[k] += v
-                        elif k.endswith("_count") and isinstance(v, int):
-                            # Ensure we sum up anything ending in _count
+                        if isinstance(v, (int, float)):
                             existing.metrics[k] = existing.metrics.get(k, 0) + v
                 
                 # Update status (FAIL > WARN > PASS)
@@ -599,8 +597,18 @@ class ValidationEngine:
         )
 
     def validate_schema_types(self, schema_config: Dict[str, str]):
-        """Checks if column types match the expected schema."""
+        """Checks if column types match the expected schema (supports aliases like int64, object)."""
         df = self._working_df
+        
+        # Internal normalization for the engine
+        def normalize(t):
+            t = t.lower()
+            if t in ["int", "int64", "integer", "int32"]: return "int"
+            if t in ["float", "float64", "double", "float32"]: return "float"
+            if t in ["string", "object", "str"]: return "string"
+            if t in ["date", "datetime", "timestamp", "datetime64[ns]"]: return "date"
+            return t
+
         type_checkers = {
             "int": lambda c: pd.api.types.is_integer_dtype(df[c]),
             "float": lambda c: pd.api.types.is_float_dtype(df[c]),
@@ -612,7 +620,8 @@ class ValidationEngine:
             if not self._has_column(col):
                 continue
 
-            checker = type_checkers.get(expected_type)
+            norm_type = normalize(expected_type)
+            checker = type_checkers.get(norm_type)
             is_valid = checker(col) if checker else False
 
             self._build_result(

@@ -61,19 +61,18 @@ def run_cli():
         sys.exit(1)
     
     # Merge/Override with CLI flags if provided
-    # Source type is now guaranteed to be present from args.source or manual check above
-    config.setdefault("source", {})["type"] = args.source
+    if args.source:
+        config.setdefault("source", {})["type"] = args.source
     
     if args.file:
-        config["source"]["file"] = args.file
+        config.setdefault("source", {})["file"] = args.file
     
-    # If BQ flags are passed, they imply 'bigquery' (though source is already set)
+    # If BQ flags are passed, they imply 'bigquery'
     if any([args.project, args.dataset, args.table]):
-        config["source"].update({
-            "project": args.project or config["source"].get("project"),
-            "dataset": args.dataset or config["source"].get("dataset"),
-            "table": args.table or config["source"].get("table")
-        })
+        src = config.setdefault("source", {})
+        if args.project: src["project"] = args.project
+        if args.dataset: src["dataset"] = args.dataset
+        if args.table: src["table"] = args.table
 
     # Final validation based on source type
     src = config["source"]
