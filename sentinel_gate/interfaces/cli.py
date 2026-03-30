@@ -13,6 +13,7 @@ def run_cli():
     # Execution modes
     parser.add_argument("--config", help="Path to rules.json configuration file")
     parser.add_argument("--mcp", action="store_true", help="Run as MCP server")
+    parser.add_argument("--studio", action="store_true", help="Launch the SentinelGate Studio UI (Streamlit)")
     
     # Overrides/Manual mode
     parser.add_argument("--source", choices=["csv", "bigquery"], help="Data source type")
@@ -48,6 +49,35 @@ def run_cli():
     if args.mcp:
         from sentinel_gate.interfaces.mcp_server import run_mcp_server
         run_mcp_server()
+        return
+
+    if args.studio:
+        import os
+        import streamlit.web.cli as stcli
+        
+        # Get the directory of the current script to find app.py
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        app_path = os.path.join(current_dir, "app.py")
+        
+        # Force production mode to allow setting ports and other server configs
+        os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
+        
+        # Check if we are running in a PyInstaller bundle
+        if hasattr(sys, '_MEIPASS'):
+            app_path = os.path.join(sys._MEIPASS, "sentinel_gate", "app.py")
+        
+        print(f"Starting SentinelGate Studio from {app_path}...")
+        
+        # Set sys.argv to emulate 'streamlit run app.py'
+        # We must keep the same process to avoid recursive loops in frozen builds
+        sys.argv = ["streamlit", "run", app_path, "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+        
+        try:
+            stcli.main()
+        except KeyboardInterrupt:
+            print("\nStudio closed.")
+        except Exception as e:
+            print(f"Error launching Studio: {e}")
         return
 
     config = {}

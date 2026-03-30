@@ -31,8 +31,4 @@ logs/
 *.log
 
 # Reports
-reports/
-
-# IDEs
-.vscode/
-.idea/
+reports*/
